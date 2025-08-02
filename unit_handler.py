@@ -71,7 +71,7 @@ class UnitHandler:
         g_l_outputs = [0] * len(inputs)
         g_l_outputs[:11] = inputs[:11]
         s_outputs = [0] * len(inputs)
-        s_outputs[11:] = s_outputs[11:]
+        s_outputs[11:] = inputs[11:]
         return np.array(g_l_outputs), np.array(s_outputs)
 
         # assumption is made the T is either set later anyway and P is the same of each input
