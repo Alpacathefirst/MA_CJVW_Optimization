@@ -1,51 +1,40 @@
-import sys
-
-sys.path.append(r"C:\Users\caspe\maingo\maingo\build\Release")
-
-import numpy as np
-import maingopy
-# from get_min_max import *
 from process import *
 
 
 # To define a model, we need to spcecialize the MAiNGOmodel class
 class Model(maingopy.MAiNGOmodel):
-    def __init__(self, pt_file, ph_file):
-        self.pt_file = pt_file
-        self.ph_file = ph_file
+    def __init__(self):
         maingopy.MAiNGOmodel.__init__(self)
-        self.pt_flash = maingopy.melonpy.FeedForwardNet()
-        self.ph_flash = maingopy.melonpy.FeedForwardNet()
-        self.path = "inputs/d6_trained_nn"
-        self.pt_flash.load_model(self.path, f'{file_pt}.xml', maingopy.melonpy.XML)
-        self.ph_flash.load_model(self.path, f'{file_ph}.xml', maingopy.melonpy.XML)
+        self.get_equations = True
         # Initialize feedforward neural network and load data from example csv file
-        self.process = EvaluateProcess(self)
+        self.process = EvaluateProcess(model=self)
 
     # We need to implement the get_variables functions for specifying the optimization variables
     def get_variables(self):
         # define bounds of the original variables, so that it rescales the results of the optimization
         # the optimization is done with the normalized version of these values
         unit_variables = [
-                     maingopy.OptimizationVariable(maingopy.Bounds(290, 400), maingopy.VT_CONTINUOUS, "T_Mixer")
-                     ]
+            maingopy.OptimizationVariable(maingopy.Bounds(300, 400), maingopy.VT_CONTINUOUS, "T_Mixer"),
+        ]
         tear_stream_vars = [
-            maingopy.OptimizationVariable(maingopy.Bounds(295, 400), maingopy.VT_CONTINUOUS, "T"),
-            maingopy.OptimizationVariable(maingopy.Bounds(1e5, 5e6), maingopy.VT_CONTINUOUS, "P"),
-            maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "CO2_vap"),
-            maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "N2_vap"),
-            maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "H2O_vap"),
-            maingopy.OptimizationVariable(maingopy.Bounds(-1e9, 1e9), maingopy.VT_CONTINUOUS, "enthalpy_vap"),
-            maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "CO2_aq"),
-            maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "N2_aq"),
-            maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "H2O_aq"),
-            maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "NaOH_aq"),
-            maingopy.OptimizationVariable(maingopy.Bounds(-1e9, 1e9), maingopy.VT_CONTINUOUS, "enthalpy_aq"),
-            maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "Magnesite"),
-            maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "Forsterite"),
-            maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "Fayalite"),
-            maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "Amorphous_Silica"),
-            maingopy.OptimizationVariable(maingopy.Bounds(-1e9, 1e9), maingopy.VT_CONTINUOUS, "enthalpy_s"),
+            maingopy.OptimizationVariable(maingopy.Bounds(100, 500), maingopy.VT_CONTINUOUS, "CO2"),
+            maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 2), maingopy.VT_CONTINUOUS, "N2"),
+            maingopy.OptimizationVariable(maingopy.Bounds(10000, 20000), maingopy.VT_CONTINUOUS, "H2O"),
+            maingopy.OptimizationVariable(maingopy.Bounds(100, 500), maingopy.VT_CONTINUOUS, "NaOH"),
+            # maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "CO2_vap"),
+            # maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "N2_vap"),
+            # maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "H2O_vap"),
+            # maingopy.OptimizationVariable(maingopy.Bounds(-1e9, 1e9), maingopy.VT_CONTINUOUS, "enthalpy_vap"),
+            # maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "CO2_aq"),
+            # maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "N2_aq"),
+            # maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "H2O_aq"),
+            # maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "NaOH_aq"),
+            # maingopy.OptimizationVariable(maingopy.Bounds(-1e9, 1e9), maingopy.VT_CONTINUOUS, "enthalpy_aq"),
+            # maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "Magnesite"),
+            # maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "Forsterite"),
+            # maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "Fayalite"),
+            # maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "Amorphous_Silica"),
+            # maingopy.OptimizationVariable(maingopy.Bounds(-1e9, 1e9), maingopy.VT_CONTINUOUS, "enthalpy_s"),
         ]
 
         variables = unit_variables + tear_stream_vars
@@ -57,34 +46,80 @@ class Model(maingopy.MAiNGOmodel):
     # The only mapping we have between them is the position in the list.
     # The results of the evaluation (i.e., objective and constraint values) need to be return in an EvaluationContainer
     def evaluate(self, vars):
-        # [0, 1, 2      , 3     , 4      , 5           , 6     , 7    , 8     , 9      , 10         , 11       , 12        , 13      , 14              , 15        ]
-        # [T, P, CO2_vap, N2_vap, H2O_vap, enthalpy_vap, CO2_aq, N2_aq, H2O_aq, NaOH_aq, enthalpy_aq, Magnesite, Forsterite, Fayalite, Amorphous_Silica, enthalpy_s]
-        co2_in = np.array([60+273.15, 100, 60, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-        sla_in = np.array([60+273.15, 100, 0, 0, 0, 0, 0, 0, 100, 1, 0, 0, 10, 5, 0, 0])
+        # Define Constant inputs
+        co2_in = np.array([
+            60 + 273.15,  # T
+            100,  # P
+            50,  # CO2_vap
+            0.01,  # N2_vap
+            0,  # H2O_vap
+            0,  # enthalpy_vap
+            0,  # CO2_aq
+            0,  # N2_aq
+            0,  # H2O_aq
+            0,  # NaOH_aq
+            0,  # enthalpy_aq
+            0,  # Magnesite
+            0,  # Forsterite
+            0,  # Fayalite
+            0,  # Amorphous_Silica
+            0  # enthalpy_s
+        ])
+
+        sla_in = np.array([
+            30 + 273.15,  # T
+            1,  # P
+            0,  # CO2_vap
+            0,  # N2_vap
+            0,  # H2O_vap
+            0,  # enthalpy_vap
+            0,  # CO2_aq
+            0,  # N2_aq
+            100,  # H2O_aq
+            1,  # NaOH_aq
+            0,  # enthalpy_aq
+            0,  # Magnesite
+            10,  # Forsterite
+            5,  # Fayalite
+            0,  # Amorphous_Silica
+            0  # enthalpy_s
+        ])
         proccess_inputs = [co2_in, sla_in]
         # t_reactor, p_reactor, t_flash, p_flash
-        parameters = [170+273.15, 100, 298.15, 1]
-        eq_constraints, objective = self.process.equations(proccess_inputs, vars, parameters)
+        parameters = [
+            170 + 273.15,  # t_reactor
+            100,  # p_reactor
+            170 + 273.15,  # t_flash
+            20  # p_flash
+        ]
 
-        # the result
-        result = maingopy.EvaluationContainer()
-        # constraints
-        # add equalities with result.eq = [equation]
-        result.eq = eq_constraints
-        # add inequalities with result.ineq = [equation]
-        result.objective = objective
-        return result
+        # if not in evaluation mode, the process.equations will return all the equations that define the process
+        if self.get_equations:
+            eq_constraints, objective = self.process.equations(proccess_inputs, vars, parameters, self.get_equations)
+
+            # the result
+            result = maingopy.EvaluationContainer()
+            # constraints
+            # add equalities with result.eq = [equation]
+            result.eq = eq_constraints
+            # add inequalities with result.ineq = [equation]
+            result.objective = objective
+            return result
+
+        # just evaluate the model, no optimization
+        else:
+            outputs = self.process.equations(proccess_inputs, self.optimal_vars, parameters, self.get_equations)
+            return outputs
 
 
 # To work with the problem, we first create an instance of the model.
-file_pt = '3107_combined(v, l, vle)_PT_1'
-file_ph = '3107_combined(v, l, vle)_PT_1'
-myModel = Model(file_pt, file_ph)
+myModel = Model()
 # We then create an instance of MAiNGO, the solver, and hand it the model.
 myMAiNGO = maingopy.MAiNGO(myModel)
 
-myMAiNGO.set_option("epsilonA", 1e-9)
-myMAiNGO.set_option('epsilonR', 1e-4)
+myMAiNGO.set_option("epsilonA", 1e-3)
+myMAiNGO.set_option('epsilonR', 1e-2)
+myMAiNGO.set_option('deltaEq', 1e-2)  # when equality constraint is met
 
 # We can have MAiNGO read a settings file:
 # fileName = ""
@@ -104,49 +139,33 @@ print(maingoStatus)
 
 # Get numeric solution values
 solution_vars = myMAiNGO.get_solution_point()
-print("Global optimum of the surrogate model: f([{}]) = {}".format(
-    solution_vars[0], myMAiNGO.get_objective_value()
+print("Global optimum of the surrogate model: f([{}, {}]) = {}".format(
+    solution_vars[0],solution_vars[1], myMAiNGO.get_objective_value(),
 ))
-
 
 # evaluate model
 
 # ========================
 # Post-Optimization Evaluation (Pure Numeric)
 # ========================
-myModel_numeric = Model(file_pt, file_ph)  # fresh model to avoid FFVar
-uh = UnitHandler(myModel_numeric)
+myModel.get_equations = False
+myModel.optimal_vars = solution_vars
+process_outputs, eq_mixer = myModel.evaluate(solution_vars)
 
-# Inputs
-co2_in = np.array([60 + 273.15, 100, 60, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], dtype=float)
-sla_in = np.array([60 + 273.15, 100, 0, 0, 0, 0, 0, 0, 100, 1, 0, 0, 10, 5, 0, 0], dtype=float)
-params = [170 + 273.15, 100, 298.15, 1]
+# nicely display the output
+stream_labels = [
+    "T [K]", "P [bar]",
+    "CO2_vap", "N2_vap", "H2O_vap", "enthalpy_vap",
+    "CO2_aq", "N2_aq", "H2O_aq", "NaOH_aq", "enthalpy_aq",
+    "Magnesite", "Forsterite", "Fayalite", "Amorphous_Silica", "enthalpy_s"
+]
 
-t_out_mixer = float(solution_vars[0])
-tear_stream = solution_vars[1:]
+for name, stream in process_outputs.items():
+    print(f"{'='*60}")
+    print(f"{name.upper()}")
+    print(f"{'-'*60}")
+    for label, value in zip(stream_labels, stream):
+        val = float(value)
+        print(f"{label:<20} {val:>15.6g}")
 
-# Step-by-step
-co2_in_proc = uh.flash_handler.evaluate_pt_flash(co2_in)
-sla_in_proc = uh.flash_handler.evaluate_pt_flash(sla_in)
-
-output_mixer, eq_mixer = uh.evaluate_mixer([sla_in_proc], t_out_mixer)
-output_pump = uh.evaluate_pump([output_mixer], params[1])
-output_heater, q_heater = uh.evaluate_heater([output_pump], params[0])
-output_reactor, q_reactor = uh.evaluate_reactor([output_heater, co2_in_proc], params[0])
-g_out_flash, l_out_flash = uh.evaluate_flash([output_reactor], params[2], params[3])
-l_out_filter, s_out_filter = uh.evaluate_filter([l_out_flash])
-
-# Results
-print("\n=== Post-Optimization Evaluation ===")
-print("Mixer output:", np.array(output_mixer))
-print("Pump output:", np.array(output_pump, dtype=float))
-print("Heater output:", np.array(output_heater, dtype=float), "Heat supply:", float(q_heater))
-print("Reactor output:", np.array(output_reactor, dtype=float), "Heat supply:", float(q_reactor))
-print("Flash gas output:", np.array(g_out_flash, dtype=float))
-print("Flash liquid output:", np.array(l_out_flash, dtype=float))
-print("Filter liquid output:", np.array(l_out_filter, dtype=float))
-print("Filter solid output:", np.array(s_out_filter, dtype=float))
-
-# Molar balance
-molar_balance = tear_stream - np.array(l_out_filter, dtype=float)
-print("Molar balance:", molar_balance)
+print('Enthalpy balance', eq_mixer)
