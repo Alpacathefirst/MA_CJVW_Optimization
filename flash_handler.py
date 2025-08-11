@@ -24,11 +24,10 @@ class FlashHandler:
     def evaluate_pt_flash(self, inputs):
         # [0, 1, 2      , 3     , 4      , 5           , 6     , 7    , 8     , 9      , 10         , 11       , 12        , 13      , 14              , 15        ]
         # [T, P, CO2_vap, N2_vap, H2O_vap, enthalpy_vap, CO2_aq, N2_aq, H2O_aq, NaOH_aq, enthalpy_aq, Magnesite, Forsterite, Fayalite, Amorphous_Silica, enthalpy_s]
-        # the ANN inputs are vapor and liquid species put together
         ann_inputs = np.array([inputs[0],  # T
                                inputs[1],  # P
-                               inputs[2] + inputs[6],  # CO2
-                               inputs[3] + inputs[7],  # N2
+                               inputs[2] + inputs[6],  # CO2_frac = CO2 / (CO2 + H2O)
+                               inputs[3] + inputs[7],  # NaOH
                                inputs[4] + inputs[8],  # H2O
                                inputs[9]  # NaOH
                                ])

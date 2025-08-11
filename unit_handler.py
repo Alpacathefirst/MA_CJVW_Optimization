@@ -72,15 +72,18 @@ class UnitHandler:
         liquid_outputs[6:] = outputs[6:]
         return np.array(gas_outputs), np.array(liquid_outputs)
 
-    def evaluate_filter(self, inputs):
+    def evaluate_filter(self, inputs, liquid_split, solid_split):
         # [0, 1, 2      , 3     , 4      , 5           , 6     , 7    , 8     , 9      , 10         , 11       , 12        , 13      , 14              , 15        ]
         # [T, P, CO2_vap, N2_vap, H2O_vap, enthalpy_vap, CO2_aq, N2_aq, H2O_aq, NaOH_aq, enthalpy_aq, Magnesite, Forsterite, Fayalite, Amorphous_Silica, enthalpy_s]
         inputs = self.combine_inputs(inputs)
         g_l_outputs = [0] * len(inputs)
-        g_l_outputs[:11] = inputs[:11]
+        g_l_outputs[:2] = inputs[:2]  # P and T don't change
+        g_l_outputs[2:11] = inputs[2:11] * liquid_split
+        g_l_outputs[11:] = inputs[11:] * (1 - solid_split)
         s_outputs = [0] * len(inputs)
-        s_outputs[:2] = inputs[:2]
-        s_outputs[11:] = inputs[11:]
+        s_outputs[:2] = inputs[:2]  # P and T don't change
+        s_outputs[2:11] = inputs[2:11] * (1-liquid_split)
+        s_outputs[11:] = inputs[11:] * solid_split
         return np.array(g_l_outputs), np.array(s_outputs)
 
     def evaluate_change_pt(self, t, p, inputs):

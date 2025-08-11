@@ -14,27 +14,15 @@ class Model(maingopy.MAiNGOmodel):
         # define bounds of the original variables, so that it rescales the results of the optimization
         # the optimization is done with the normalized version of these values
         unit_variables = [
-            maingopy.OptimizationVariable(maingopy.Bounds(300, 400), maingopy.VT_CONTINUOUS, "T_Mixer"),
+            maingopy.OptimizationVariable(maingopy.Bounds(273, 400), maingopy.VT_CONTINUOUS, "T_Mixer"),
+            maingopy.OptimizationVariable(maingopy.Bounds(0, 5000), maingopy.VT_CONTINUOUS, "CO2_in")
         ]
+
         tear_stream_vars = [
-            maingopy.OptimizationVariable(maingopy.Bounds(100, 500), maingopy.VT_CONTINUOUS, "CO2"),
-            maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 2), maingopy.VT_CONTINUOUS, "N2"),
-            maingopy.OptimizationVariable(maingopy.Bounds(10000, 20000), maingopy.VT_CONTINUOUS, "H2O"),
-            maingopy.OptimizationVariable(maingopy.Bounds(100, 500), maingopy.VT_CONTINUOUS, "NaOH"),
-            # maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "CO2_vap"),
-            # maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "N2_vap"),
-            # maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "H2O_vap"),
-            # maingopy.OptimizationVariable(maingopy.Bounds(-1e9, 1e9), maingopy.VT_CONTINUOUS, "enthalpy_vap"),
-            # maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "CO2_aq"),
-            # maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "N2_aq"),
-            # maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "H2O_aq"),
-            # maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "NaOH_aq"),
-            # maingopy.OptimizationVariable(maingopy.Bounds(-1e9, 1e9), maingopy.VT_CONTINUOUS, "enthalpy_aq"),
-            # maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "Magnesite"),
-            # maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "Forsterite"),
-            # maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "Fayalite"),
-            # maingopy.OptimizationVariable(maingopy.Bounds(1e-16, 1e5), maingopy.VT_CONTINUOUS, "Amorphous_Silica"),
-            # maingopy.OptimizationVariable(maingopy.Bounds(-1e9, 1e9), maingopy.VT_CONTINUOUS, "enthalpy_s"),
+            maingopy.OptimizationVariable(maingopy.Bounds(1e-2, 100), maingopy.VT_CONTINUOUS, "CO2"),
+            maingopy.OptimizationVariable(maingopy.Bounds(1e-8, 10), maingopy.VT_CONTINUOUS, "N2"),
+            maingopy.OptimizationVariable(maingopy.Bounds(1, 1000), maingopy.VT_CONTINUOUS, "H2O"),
+            maingopy.OptimizationVariable(maingopy.Bounds(1e-2, 100), maingopy.VT_CONTINUOUS, "NaOH"),
         ]
 
         variables = unit_variables + tear_stream_vars
@@ -50,8 +38,8 @@ class Model(maingopy.MAiNGOmodel):
         co2_in = np.array([
             60 + 273.15,  # T
             100,  # P
-            50,  # CO2_vap
-            0.01,  # N2_vap
+            25.15,  # CO2_vap
+            0.0001,  # N2_vap
             0,  # H2O_vap
             0,  # enthalpy_vap
             0,  # CO2_aq
@@ -90,12 +78,14 @@ class Model(maingopy.MAiNGOmodel):
             170 + 273.15,  # t_reactor
             100,  # p_reactor
             170 + 273.15,  # t_flash
-            20  # p_flash
+            20,  # p_flash
+            70 + 273.15,  # t_tearstream
+            1  # p_tearstream
         ]
 
         # if not in evaluation mode, the process.equations will return all the equations that define the process
         if self.get_equations:
-            eq_constraints, objective = self.process.equations(proccess_inputs, vars, parameters, self.get_equations)
+            eq_constraints, objective = self.process.equations(proccess_inputs, vars, parameters)
 
             # the result
             result = maingopy.EvaluationContainer()
@@ -108,16 +98,17 @@ class Model(maingopy.MAiNGOmodel):
 
         # just evaluate the model, no optimization
         else:
-            outputs = self.process.equations(proccess_inputs, self.optimal_vars, parameters, self.get_equations)
+            outputs = self.process.equations(proccess_inputs, self.optimal_vars, parameters)
             return outputs
 
+# TODO: Whats better, objective always molar balance of tear stream and other equalities
 
 # To work with the problem, we first create an instance of the model.
 myModel = Model()
 # We then create an instance of MAiNGO, the solver, and hand it the model.
 myMAiNGO = maingopy.MAiNGO(myModel)
 
-myMAiNGO.set_option("epsilonA", 1e-3)
+myMAiNGO.set_option("epsilonA", 3e-2)
 myMAiNGO.set_option('epsilonR', 1e-2)
 myMAiNGO.set_option('deltaEq', 1e-2)  # when equality constraint is met
 
