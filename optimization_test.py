@@ -20,7 +20,6 @@ class Model(maingopy.MAiNGOmodel):
 
         tear_stream_vars = [
             maingopy.OptimizationVariable(maingopy.Bounds(1e-2, 100), maingopy.VT_CONTINUOUS, "CO2"),
-            maingopy.OptimizationVariable(maingopy.Bounds(1e-8, 10), maingopy.VT_CONTINUOUS, "N2"),
             maingopy.OptimizationVariable(maingopy.Bounds(1, 1000), maingopy.VT_CONTINUOUS, "H2O"),
             maingopy.OptimizationVariable(maingopy.Bounds(1e-2, 100), maingopy.VT_CONTINUOUS, "NaOH"),
         ]
@@ -35,51 +34,27 @@ class Model(maingopy.MAiNGOmodel):
     # The results of the evaluation (i.e., objective and constraint values) need to be return in an EvaluationContainer
     def evaluate(self, vars):
         # Define Constant inputs
-        co2_in = np.array([
-            60 + 273.15,  # T
-            100,  # P
-            25.15,  # CO2_vap
-            0.0001,  # N2_vap
-            0,  # H2O_vap
-            0,  # enthalpy_vap
-            0,  # CO2_aq
-            0,  # N2_aq
-            0,  # H2O_aq
-            0,  # NaOH_aq
-            0,  # enthalpy_aq
-            0,  # Magnesite
-            0,  # Forsterite
-            0,  # Fayalite
-            0,  # Amorphous_Silica
-            0  # enthalpy_s
-        ])
+        co2_in = [0] * len(NAMES)
+        co2_in[IDX['T']] = 60 + 273.15
+        co2_in[IDX['P']] = 100
+        co2_in[IDX['CO2_vap']] = 100
 
-        sla_in = np.array([
-            30 + 273.15,  # T
-            1,  # P
-            0,  # CO2_vap
-            0,  # N2_vap
-            0,  # H2O_vap
-            0,  # enthalpy_vap
-            0,  # CO2_aq
-            0,  # N2_aq
-            100,  # H2O_aq
-            1,  # NaOH_aq
-            0,  # enthalpy_aq
-            0,  # Magnesite
-            10,  # Forsterite
-            5,  # Fayalite
-            0,  # Amorphous_Silica
-            0  # enthalpy_s
-        ])
-        proccess_inputs = [co2_in, sla_in]
-        # t_reactor, p_reactor, t_flash, p_flash
+        sla_in = [0] * len(NAMES)
+        sla_in[IDX['T']] = 30 + 273.15
+        sla_in[IDX['P']] = 1
+        sla_in[IDX['H2O_aq']] = 100
+        sla_in[IDX['NaOH_aq']] = 1
+        sla_in[IDX['Forsterite']] = 10
+        sla_in[IDX['Fayalite']] = 5
+
+        proccess_inputs = [np.array(co2_in), np.array(sla_in)]
+
         parameters = [
             170 + 273.15,  # t_reactor
             100,  # p_reactor
-            170 + 273.15,  # t_flash
+            160 + 273.15,  # t_flash
             20,  # p_flash
-            70 + 273.15,  # t_tearstream
+            68.75 + 273.15,  # t_tearstream
             1  # p_tearstream
         ]
 
@@ -101,14 +76,13 @@ class Model(maingopy.MAiNGOmodel):
             outputs = self.process.equations(proccess_inputs, self.optimal_vars, parameters)
             return outputs
 
-# TODO: Whats better, objective always molar balance of tear stream and other equalities
 
 # To work with the problem, we first create an instance of the model.
 myModel = Model()
 # We then create an instance of MAiNGO, the solver, and hand it the model.
 myMAiNGO = maingopy.MAiNGO(myModel)
 
-myMAiNGO.set_option("epsilonA", 3e-2)
+myMAiNGO.set_option("epsilonA", 1e-2)
 myMAiNGO.set_option('epsilonR', 1e-2)
 myMAiNGO.set_option('deltaEq', 1e-2)  # when equality constraint is met
 
@@ -131,7 +105,7 @@ print(maingoStatus)
 # Get numeric solution values
 solution_vars = myMAiNGO.get_solution_point()
 print("Global optimum of the surrogate model: f([{}, {}]) = {}".format(
-    solution_vars[0],solution_vars[1], myMAiNGO.get_objective_value(),
+    solution_vars[0], solution_vars[1], myMAiNGO.get_objective_value(),
 ))
 
 # evaluate model
@@ -144,18 +118,11 @@ myModel.optimal_vars = solution_vars
 process_outputs, eq_mixer = myModel.evaluate(solution_vars)
 
 # nicely display the output
-stream_labels = [
-    "T [K]", "P [bar]",
-    "CO2_vap", "N2_vap", "H2O_vap", "enthalpy_vap",
-    "CO2_aq", "N2_aq", "H2O_aq", "NaOH_aq", "enthalpy_aq",
-    "Magnesite", "Forsterite", "Fayalite", "Amorphous_Silica", "enthalpy_s"
-]
-
 for name, stream in process_outputs.items():
     print(f"{'='*60}")
     print(f"{name.upper()}")
     print(f"{'-'*60}")
-    for label, value in zip(stream_labels, stream):
+    for label, value in zip(NAMES, stream):
         val = float(value)
         print(f"{label:<20} {val:>15.6g}")
 

@@ -1,4 +1,4 @@
-from constants.imports import *
+from constants.c3_imports import *
 
 
 def get_min_max(file):

@@ -15,8 +15,8 @@ class EvaluateProcess:
         # calculate inputs once to get enthalpies
         tear_stream = self.unit_handler.complicate_tearstream(t_tear, p_tear, tear_stream_simple)
         tear_stream = self.unit_handler.flash_handler.evaluate_pt_flash(tear_stream)
-        co2_in = self.unit_handler.flash_handler.evaluate_pt_flash(co2_in)
-        sla_in = self.unit_handler.flash_handler.evaluate_pt_flash(sla_in)
+        co2_in = self.unit_handler.flash_handler.get_enthalpy(co2_in)
+        sla_in = self.unit_handler.flash_handler.get_enthalpy(sla_in)
         output_mixer, eq_mixer = self.unit_handler.evaluate_mixer([sla_in, tear_stream], t_out_mixer)
         output_pump = self.unit_handler.evaluate_pump([output_mixer], p_reactor)
         output_heater, q_heater = self.unit_handler.evaluate_heater([output_pump], t_reactor)
@@ -30,8 +30,9 @@ class EvaluateProcess:
             eq_constraints = [eq_mixer]
             molar_balances_squared = []
             for index, specie in enumerate(output_tearstream_simple):
-                molar_balance = (output_tearstream_simple[index] - tear_stream_simple[index]) / maingopy.pos(output_tearstream_simple[index])
-                molar_balances_squared.append(molar_balance**2)
+                molar_balance = (output_tearstream_simple[index] - tear_stream_simple[index]) / maingopy.pos(
+                    output_tearstream_simple[index])
+                molar_balances_squared.append(molar_balance ** 2)
             sum_molar_balances_squared = sum(np.array(molar_balances_squared))
             eq_constraints = eq_constraints
             # objective = ((g_out_flash[2] - 5)/5)**2 + sum_molar_balances_squared
@@ -52,6 +53,6 @@ class EvaluateProcess:
                 'Liquid out filter': l_out_filter,
                 'Solid out filter': s_out_filter,
                 'Output tearstream': output_tearstream,
-                'Error tearstream': (output_tearstream - tear_stream) / tear_stream,
+                'Error tearstream': np.where(tear_stream != 0, (output_tearstream - tear_stream) / tear_stream, 0),
             }
             return output_dict, eq_mixer

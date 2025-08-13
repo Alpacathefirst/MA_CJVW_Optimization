@@ -1,52 +1,50 @@
 from flash_handler import *
+from flash_handler_2 import *
 
 
 class UnitHandler:
     def __init__(self, model):
         self.model = model
-        self.flash_handler = FlashHandler(self.model)
+        if NN_TYPE == 1:
+            self.flash_handler = FlashHandler(self.model)
+        else:
+            self.flash_handler = FlashHandler2(self.model)
 
     def evaluate_heater(self, inputs, t_out):
         inputs = self.combine_inputs(inputs)
-        # [0, 1, 2      , 3     , 4      , 5           , 6     , 7    , 8     , 9      , 10         , 11       , 12        , 13      , 14              , 15        ]
-        # [T, P, CO2_vap, N2_vap, H2O_vap, enthalpy_vap, CO2_aq, N2_aq, H2O_aq, NaOH_aq, enthalpy_aq, Magnesite, Forsterite, Fayalite, Amorphous_Silica, enthalpy_s]
-        enthalpy_in = inputs[5] + inputs[10] + inputs[15]
-        inputs[0] = t_out
+        enthalpy_in = inputs[IDX['enthalpy_vle']] + inputs[IDX['enthalpy_s']]
+        inputs[IDX['T']] = t_out
         outputs = self.flash_handler.evaluate_pt_flash(inputs)
-        enthalpy_out = outputs[5] + outputs[10] + outputs[15]
+        enthalpy_out = outputs[IDX['enthalpy_vle']] + outputs[IDX['enthalpy_s']]
         heat_supply = enthalpy_out - enthalpy_in
         return outputs, heat_supply
 
     def evaluate_reactor(self, inputs, t_out):
         inputs = self.combine_inputs(inputs)
-        # [0, 1, 2      , 3     , 4      , 5           , 6     , 7    , 8     , 9      , 10         , 11       , 12        , 13      , 14              , 15        ]
-        # [T, P, CO2_vap, N2_vap, H2O_vap, enthalpy_vap, CO2_aq, N2_aq, H2O_aq, NaOH_aq, enthalpy_aq, Magnesite, Forsterite, Fayalite, Amorphous_Silica, enthalpy_s]
-        enthalpy_in = inputs[5] + inputs[10] + inputs[15]
-        inputs[0] = t_out
+        enthalpy_in = inputs[IDX['enthalpy_vle']] + inputs[IDX['enthalpy_s']]
+        inputs[IDX['T']] = t_out
         # reaction
         fractional_conversion = 0.95
-        n_reacted = fractional_conversion * inputs[12]
+        n_reacted = fractional_conversion * inputs[IDX['Forsterite']]
         # Forsterite + 2 CO2 = 2 Magnesite + Amourphous_silica
-        inputs[12] -= n_reacted
-        inputs[2] -= 2 * n_reacted
-        inputs[11] += 2 * n_reacted
-        inputs[14] += n_reacted
+        inputs[IDX['Forsterite']] -= n_reacted
+        inputs[IDX['CO2_vap']] -= 2 * n_reacted
+        inputs[IDX['Magnesite']] += 2 * n_reacted
+        inputs[IDX['Amorphous_Silica']] += n_reacted
         outputs = self.flash_handler.evaluate_pt_flash(inputs)
-        enthalpy_out = outputs[5] + outputs[10] + inputs[15]
+        enthalpy_out = outputs[IDX['enthalpy_vle']] + outputs[IDX['enthalpy_s']]
         heat_supply = enthalpy_out - enthalpy_in
         return outputs, heat_supply
 
     # mixer is implemented as adiabatic only
     def evaluate_mixer(self, inputs, t_out):
         inputs = self.combine_inputs(inputs)
-        # [0, 1, 2      , 3     , 4      , 5           , 6     , 7    , 8     , 9      , 10         , 11       , 12        , 13      , 14              , 15        ]
-        # [T, P, CO2_vap, N2_vap, H2O_vap, enthalpy_vap, CO2_aq, N2_aq, H2O_aq, NaOH_aq, enthalpy_aq, Magnesite, Forsterite, Fayalite, Amorphous_Silica, enthalpy_s]
-        inputs[0] = t_out
+        enthalpy_in = inputs[IDX['enthalpy_vle']] + inputs[IDX['enthalpy_s']]
+        inputs[IDX['T']] = t_out
         outputs = self.flash_handler.evaluate_pt_flash(inputs)
-        enthalpy_in = inputs[5] + inputs[10] + inputs[15]
-        enthalpy_out = outputs[5] + outputs[10] + outputs[15]
+        enthalpy_out = outputs[IDX['enthalpy_vle']] + outputs[IDX['enthalpy_s']]
         if self.model.get_equations:
-            enthalpy = maingopy.neg(enthalpy_in)
+            enthalpy = maingopy.neg(enthalpy_in)  # tell maingopy this value will always be negative
         else:
             enthalpy = enthalpy_in
         eq_constraint = (enthalpy_out - enthalpy_in) / enthalpy
@@ -54,42 +52,60 @@ class UnitHandler:
 
     def evaluate_pump(self, inputs, p_out):
         inputs = self.combine_inputs(inputs)
-        inputs[1] = p_out
+        inputs[IDX['P']] = p_out
         outputs = self.flash_handler.evaluate_pt_flash(inputs)
         return outputs
 
     def evaluate_flash(self, inputs, t_out, p_out):
-        # [0, 1, 2      , 3     , 4      , 5           , 6     , 7    , 8     , 9      , 10         , 11       , 12        , 13      , 14              , 15        ]
-        # [T, P, CO2_vap, N2_vap, H2O_vap, enthalpy_vap, CO2_aq, N2_aq, H2O_aq, NaOH_aq, enthalpy_aq, Magnesite, Forsterite, Fayalite, Amorphous_Silica, enthalpy_s]
         inputs = self.combine_inputs(inputs)
-        inputs[0] = t_out
-        inputs[1] = p_out
+        inputs[IDX['T']] = t_out
+        inputs[IDX['P']] = p_out
+
         outputs = self.flash_handler.evaluate_pt_flash(inputs)
-        gas_outputs = [0] * len(outputs)  # plain Python list, can hold FFVar
-        gas_outputs[:6] = outputs[:6]
-        liquid_outputs = [0] * len(outputs)
-        liquid_outputs[:2] = outputs[:2]
-        liquid_outputs[6:] = outputs[6:]
-        return np.array(gas_outputs), np.array(liquid_outputs)
+
+        # initialise outputs
+        vap_outputs = [0] * len(outputs)
+        aq_outputs = [0] * len(outputs)
+
+        vap_outputs[IDX['T']] = outputs[IDX['T']]
+        vap_outputs[IDX['P']] = outputs[IDX['P']]
+        aq_outputs[IDX['T']] = outputs[IDX['T']]
+        aq_outputs[IDX['P']] = outputs[IDX['P']]
+
+        for s in VAP_SCECIES:
+            vap_outputs[IDX[s]] = outputs[IDX[s]]
+
+        for s in AQ_SCECIES + SOL_SPECIES:
+            aq_outputs[IDX[s]] = outputs[IDX[s]]
+
+        # TODO: include energy balance
+
+        return np.array(vap_outputs), np.array(aq_outputs)
 
     def evaluate_filter(self, inputs, liquid_split, solid_split):
-        # [0, 1, 2      , 3     , 4      , 5           , 6     , 7    , 8     , 9      , 10         , 11       , 12        , 13      , 14              , 15        ]
-        # [T, P, CO2_vap, N2_vap, H2O_vap, enthalpy_vap, CO2_aq, N2_aq, H2O_aq, NaOH_aq, enthalpy_aq, Magnesite, Forsterite, Fayalite, Amorphous_Silica, enthalpy_s]
         inputs = self.combine_inputs(inputs)
-        g_l_outputs = [0] * len(inputs)
-        g_l_outputs[:2] = inputs[:2]  # P and T don't change
-        g_l_outputs[2:11] = inputs[2:11] * liquid_split
-        g_l_outputs[11:] = inputs[11:] * (1 - solid_split)
+        vle_outputs = [0] * len(inputs)
         s_outputs = [0] * len(inputs)
-        s_outputs[:2] = inputs[:2]  # P and T don't change
-        s_outputs[2:11] = inputs[2:11] * (1-liquid_split)
-        s_outputs[11:] = inputs[11:] * solid_split
-        return np.array(g_l_outputs), np.array(s_outputs)
+
+        vle_outputs[IDX['T']] = inputs[IDX['T']]
+        vle_outputs[IDX['P']] = inputs[IDX['P']]
+        s_outputs[IDX['T']] = inputs[IDX['T']]
+        s_outputs[IDX['P']] = inputs[IDX['P']]
+
+        for s in (VAP_SCECIES + AQ_SCECIES):
+            vle_outputs[IDX[s]] = inputs[IDX[s]] * liquid_split
+            s_outputs[IDX[s]] = inputs[IDX[s]] * (1 - liquid_split)
+        for s in SOL_SPECIES:
+            vle_outputs[IDX[s]] = inputs[IDX[s]] * (1 - solid_split)
+            s_outputs[IDX[s]] = inputs[IDX[s]] * solid_split
+
+        # TODO: Include energy balance
+        return np.array(vle_outputs), np.array(s_outputs)
 
     def evaluate_change_pt(self, t, p, inputs):
         inputs = self.combine_inputs(inputs)
-        inputs[0] = t
-        inputs[1] = p
+        inputs[IDX['T']] = t
+        inputs[IDX['P']] = p
         outputs = self.flash_handler.evaluate_pt_flash(inputs)
         return outputs
 
@@ -102,24 +118,18 @@ class UnitHandler:
         return total_input
 
     def simplify_tearstream(self, inputs):
-        # inputs = [T, P, CO2, N2, H2O, NaOH]
-        # [0, 1, 2      , 3     , 4      , 5           , 6     , 7    , 8     , 9      , 10         , 11       , 12        , 13      , 14              , 15        ]
-        # [T, P, CO2_vap, N2_vap, H2O_vap, enthalpy_vap, CO2_aq, N2_aq, H2O_aq, NaOH_aq, enthalpy_aq, Magnesite, Forsterite, Fayalite, Amorphous_Silica, enthalpy_s]
         inputs_simple = [
-                         inputs[2] + inputs[6],  # CO2
-                         inputs[3] + inputs[7],  # N2
-                         inputs[4] + inputs[8],  # H2O
-                         inputs[9]]  # NaOH
+                         inputs[IDX['CO2_vap']] + inputs[IDX['CO2_aq']],
+                         inputs[IDX['H2O_vap']] + inputs[IDX['H2O_aq']],
+                         inputs[IDX['NaOH_aq']]]
         return np.array(inputs_simple)
 
     def complicate_tearstream(self, t, p, inputs):
-        inputs_comp = np.array([t,  # T
-                       p,  # P
-                       inputs[0],  # CO2_vap
-                       inputs[1],  # N2_Vap
-                       inputs[2],  # H2O_vap
-                       0, 0, 0, 0,
-                       inputs[3],  # NaOH
-                       0, 0, 0, 0, 0, 0])
-        inputs_comp = self.flash_handler.evaluate_pt_flash(inputs_comp)
+        inputs_comp = [0] * len(NAMES)
+        inputs_comp[IDX['T']] = t
+        inputs_comp[IDX['P']] = p
+        inputs_comp[IDX['CO2_vap']] = inputs[0]
+        inputs_comp[IDX['H2O_aq']] = inputs[1]
+        inputs_comp[IDX['NaOH_aq']] = inputs[2]
+        inputs_comp = self.flash_handler.evaluate_pt_flash(np.array(inputs_comp))
         return inputs_comp
