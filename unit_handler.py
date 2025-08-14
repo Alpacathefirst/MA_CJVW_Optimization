@@ -23,7 +23,17 @@ class UnitHandler:
         inputs = self.combine_inputs(inputs)
         enthalpy_in = inputs[IDX['enthalpy_vle']] + inputs[IDX['enthalpy_s']]
         inputs[IDX['T']] = t_out
-        # reaction
+        # SLR Equality constraint
+        # ---------------------------------
+        # total amount of solids in kg
+        m_s = 0
+        for s in SOL_SPECIES:
+            m_s += inputs[IDX[s]] * MOLAR_MASS[s]
+        m_water = (inputs[IDX['H2O_vap']] + inputs[IDX['H2O_aq']]) * MOLAR_MASS['H2O']
+        slr_equality = m_s / maingopy.pos(m_water) - 0.4
+        # --------------------------
+        # Molality equality constraint
+        molality_eq = inputs[IDX['NaOH_aq']] / maingopy.pos(m_water) - 1
         fractional_conversion = 0.95
         n_reacted = fractional_conversion * inputs[IDX['Forsterite']]
         # Forsterite + 2 CO2 = 2 Magnesite + Amourphous_silica
@@ -34,7 +44,7 @@ class UnitHandler:
         outputs = self.flash_handler.evaluate_pt_flash(inputs)
         enthalpy_out = outputs[IDX['enthalpy_vle']] + outputs[IDX['enthalpy_s']]
         heat_supply = enthalpy_out - enthalpy_in
-        return outputs, heat_supply
+        return outputs, heat_supply, slr_equality, molality_eq
 
     # mixer is implemented as adiabatic only
     def evaluate_mixer(self, inputs, t_out):

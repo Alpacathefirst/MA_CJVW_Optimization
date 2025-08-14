@@ -25,8 +25,6 @@ B = np.array(b)
 C = np.array(c)
 D = np.array(d)
 
-MOLAR_MASS_WATER = 18.015e-3  # mol/kg
-
 # Leave T and P at index 0 and 1, otherwise it will break the code
 NAMES = [
     "T", "P", "CO2_vap", "N2_vap", "H2O_vap",
@@ -41,3 +39,15 @@ AQ_SCECIES = ["CO2_aq", "N2_aq", "H2O_aq", "NaOH_aq"]
 SOL_SPECIES = ["Magnesite", "Forsterite", "Fayalite", "Amorphous_Silica"]
 
 EPSILON = 1e-16
+
+# molar masses in kg/mol
+MOLAR_MASS = {
+    "CO2": 0.0440095,
+    "N2": 0.0280134,
+    "H2O": 0.01801528,
+    "NaOH": 0.039997,
+    "Magnesite": 0.084313,         # MgCO3
+    "Forsterite": 0.140693,        # Mg2SiO4
+    "Fayalite": 0.203774,          # Fe2SiO4
+    "Amorphous_Silica": 0.0600843  # SiO2
+}

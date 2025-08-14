@@ -37,13 +37,13 @@ class FlashHandler2:
 
         if self.model.get_equations:
             co2_frac = self.co2 / maingopy.pos((self.co2 + self.h2o))
-            molality = self.naoh / maingopy.pos((self.h2o * MOLAR_MASS_WATER))
+            molality = self.naoh / maingopy.pos((self.h2o * MOLAR_MASS['H2O']))
 
         # when just evaluating the model, the FFNN needs to return doubles not FFVars, his is done by loading the NN
         # differently. Als can't use maingopy.pos()
         else:
             co2_frac = self.co2 / (self.co2 + self.h2o)
-            molality = self.naoh / (self.h2o * MOLAR_MASS_WATER)
+            molality = self.naoh / (self.h2o * MOLAR_MASS['H2O'])
 
             self.pt_flash = maingopy.melonpy.FeedForwardNetDouble(self.full_path, maingopy.melonpy.MODEL_FILE_TYPE.XML)
 

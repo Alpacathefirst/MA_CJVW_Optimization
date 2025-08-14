@@ -27,7 +27,7 @@ class FlashHandler:
         naoh = inputs[IDX['NaOH_aq']]
 
         co2_frac = co2 / maingopy.pos((co2 + h2o))
-        molality = naoh / maingopy.pos((h2o * MOLAR_MASS_WATER))
+        molality = naoh / maingopy.pos((h2o * MOLAR_MASS['H2O']))
         ann_inputs = np.array([inputs[IDX['T']],  # T
                                inputs[IDX['P']],  # P
                                co2_frac,  # CO2_frac = CO2 / (CO2 + H2O)
@@ -37,7 +37,7 @@ class FlashHandler:
         # differently
         if not self.model.get_equations:
             co2_frac = co2 / (co2 + h2o)
-            molality = naoh / (h2o * MOLAR_MASS_WATER + EPSILON)
+            molality = naoh / (h2o * MOLAR_MASS['H2O'] + EPSILON)
             ann_inputs = [inputs[IDX['T']],  # T
                           inputs[IDX['P']],  # P
                           co2_frac,  # CO2_frac = CO2 / (CO2 + H2O)

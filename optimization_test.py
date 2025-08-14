@@ -15,7 +15,9 @@ class Model(maingopy.MAiNGOmodel):
         # the optimization is done with the normalized version of these values
         unit_variables = [
             maingopy.OptimizationVariable(maingopy.Bounds(273, 400), maingopy.VT_CONTINUOUS, "T_Mixer"),
-            maingopy.OptimizationVariable(maingopy.Bounds(0, 5000), maingopy.VT_CONTINUOUS, "CO2_in")
+            maingopy.OptimizationVariable(maingopy.Bounds(1, 5000), maingopy.VT_CONTINUOUS, "H2O_in"),
+            maingopy.OptimizationVariable(maingopy.Bounds(0, 100), maingopy.VT_CONTINUOUS, 'NaOH_in'),
+            maingopy.OptimizationVariable(maingopy.Bounds(1, 500), maingopy.VT_CONTINUOUS, 'CO2_in')
         ]
 
         tear_stream_vars = [
@@ -37,13 +39,13 @@ class Model(maingopy.MAiNGOmodel):
         co2_in = [0] * len(NAMES)
         co2_in[IDX['T']] = 60 + 273.15
         co2_in[IDX['P']] = 100
-        co2_in[IDX['CO2_vap']] = 100
+        co2_in[IDX['CO2_vap']] = vars[3]
 
         sla_in = [0] * len(NAMES)
         sla_in[IDX['T']] = 30 + 273.15
         sla_in[IDX['P']] = 1
-        sla_in[IDX['H2O_aq']] = 100
-        sla_in[IDX['NaOH_aq']] = 1
+        sla_in[IDX['H2O_aq']] = vars[1]
+        sla_in[IDX['NaOH_aq']] = vars[2]
         sla_in[IDX['Forsterite']] = 10
         sla_in[IDX['Fayalite']] = 5
 
