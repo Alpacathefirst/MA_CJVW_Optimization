@@ -46,8 +46,8 @@ class Model(maingopy.MAiNGOmodel):
         sla_in[IDX['P']] = 1
         sla_in[IDX['H2O_aq']] = vars[1]
         sla_in[IDX['NaOH_aq']] = vars[2]
-        sla_in[IDX['Forsterite']] = 10
-        sla_in[IDX['Fayalite']] = 5
+        sla_in[IDX['Forsterite']] = 15
+        sla_in[IDX['Fayalite']] = 10
 
         proccess_inputs = [np.array(co2_in), np.array(sla_in)]
 
@@ -56,7 +56,7 @@ class Model(maingopy.MAiNGOmodel):
             100,  # p_reactor
             160 + 273.15,  # t_flash
             20,  # p_flash
-            68.75 + 273.15,  # t_tearstream
+            68.91 + 273.15,  # t_tearstream
             1  # p_tearstream
         ]
 
