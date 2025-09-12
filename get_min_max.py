@@ -1,8 +1,8 @@
-from constants.c3_imports import *
+from constants.c1_constants import *
 
 
 def get_min_max(file):
-    transformer_dir = f'inputs\\d7_trained_nn_transformers\\{file}'
+    transformer_dir = rf'{TRANSFORMERS_DIR}\{file}'
 
     minmax_inp = joblib.load(f'{transformer_dir}\\minmax_inp')
     minmax_out = joblib.load(f'{transformer_dir}\\minmax_out')

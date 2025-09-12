@@ -14,9 +14,9 @@ class EvaluateProcess:
         t_reactor, p_reactor, t_flash, p_flash, t_tear, p_tear = p[0], p[1], p[2], p[3], p[4], p[5]
         # calculate inputs once to get enthalpies
         tear_stream = self.unit_handler.complicate_tearstream(t_tear, p_tear, tear_stream_simple)
-        tear_stream = self.unit_handler.flash_handler.evaluate_pt_flash(tear_stream)
-        co2_in = self.unit_handler.flash_handler.get_enthalpy(co2_in)
-        sla_in = self.unit_handler.flash_handler.get_enthalpy(sla_in)
+        tear_stream = self.unit_handler.vle_handler.evaluate(tear_stream)
+        co2_in = self.unit_handler.vle_handler.get_enthalpy(co2_in)
+        sla_in = self.unit_handler.vle_handler.get_enthalpy(sla_in)
         output_mixer, eq_mixer = self.unit_handler.evaluate_mixer([sla_in, tear_stream], t_out_mixer)
         output_pump = self.unit_handler.evaluate_pump([output_mixer], p_reactor)
         output_heater, q_heater = self.unit_handler.evaluate_heater([output_pump], t_reactor)

@@ -1,23 +1,12 @@
-from flash_handler import *
-from flash_handler_2 import *
+from vle_handler import *
+from sh_handler import *
 
 
 class UnitHandler:
     def __init__(self, model):
         self.model = model
-        if NN_TYPE == 1:
-            self.flash_handler = FlashHandler(self.model)
-        else:
-            self.flash_handler = FlashHandler2(self.model)
-
-    def evaluate_heater(self, inputs, t_out):
-        inputs = self.combine_inputs(inputs)
-        enthalpy_in = inputs[IDX['enthalpy_vle']] + inputs[IDX['enthalpy_s']]
-        inputs[IDX['T']] = t_out
-        outputs = self.flash_handler.evaluate_pt_flash(inputs)
-        enthalpy_out = outputs[IDX['enthalpy_vle']] + outputs[IDX['enthalpy_s']]
-        heat_supply = enthalpy_out - enthalpy_in
-        return outputs, heat_supply
+        self.vle_handler = VLEHandler(self.model)
+        self.sh_handler = SHHandler(self.model)
 
     def evaluate_reactor(self, inputs, t_out):
         inputs = self.combine_inputs(inputs)
@@ -41,37 +30,51 @@ class UnitHandler:
         inputs[IDX['CO2_vap']] -= 2 * n_reacted
         inputs[IDX['Magnesite']] += 2 * n_reacted
         inputs[IDX['Amorphous_Silica']] += n_reacted
-        outputs = self.flash_handler.evaluate_pt_flash(inputs)
+        outputs, ineqs = self.sh_handler.evaluate(inputs)
         enthalpy_out = outputs[IDX['enthalpy_vle']] + outputs[IDX['enthalpy_s']]
         heat_supply = enthalpy_out - enthalpy_in
-        return outputs, heat_supply, slr_equality, molality_eq
+        return outputs, heat_supply, slr_equality, molality_eq, ineqs
 
     # mixer is implemented as adiabatic only
     def evaluate_mixer(self, inputs, t_out):
         inputs = self.combine_inputs(inputs)
         enthalpy_in = inputs[IDX['enthalpy_vle']] + inputs[IDX['enthalpy_s']]
         inputs[IDX['T']] = t_out
-        outputs = self.flash_handler.evaluate_pt_flash(inputs)
+        outputs, ineqs = self.sh_handler.evaluate(inputs)
         enthalpy_out = outputs[IDX['enthalpy_vle']] + outputs[IDX['enthalpy_s']]
         if self.model.get_equations:
             enthalpy = maingopy.neg(enthalpy_in)  # tell maingopy this value will always be negative
         else:
             enthalpy = enthalpy_in
-        eq_constraint = (enthalpy_out - enthalpy_in) / enthalpy
-        return outputs, eq_constraint
+        Q = (enthalpy_out - enthalpy_in) / enthalpy
+        return outputs, Q, ineqs
 
-    def evaluate_pump(self, inputs, p_out):
+    def evaluate_pump(self, inputs, t_out, p_out):
         inputs = self.combine_inputs(inputs)
+        delta_p = p_out - inputs[IDX['P']]
+        volume_flow = inputs[IDX['H2O_aq']] * MOLAR_MASS['H2O'] / 1000  # in m3 / time_unit
+        power = delta_p * volume_flow / 1  # pump efficiency = 1
+        enthalpy_in = inputs[IDX['enthalpy_vle']] + inputs[IDX['enthalpy_s']] + power
         inputs[IDX['P']] = p_out
-        outputs = self.flash_handler.evaluate_pt_flash(inputs)
-        return outputs
+        inputs[IDX['T']] = t_out
+        outputs, ineqs = self.sh_handler.evaluate(inputs)
+        enthalpy_out = outputs[IDX['enthalpy_vle']] + outputs[IDX['enthalpy_s']]
+        if self.model.get_equations:
+            enthalpy = maingopy.neg(enthalpy_in)  # tell maingopy this value will always be negative
+        else:
+            enthalpy = enthalpy_in
+        # when the unit is adiabatic scale the heat flow
+        Q = (enthalpy_out - enthalpy_in) / enthalpy
+        return outputs, Q, ineqs
 
     def evaluate_flash(self, inputs, t_out, p_out):
         inputs = self.combine_inputs(inputs)
+        enthalpy_in = inputs[IDX['enthalpy_vle']] + inputs[IDX['enthalpy_s']]
+
         inputs[IDX['T']] = t_out
         inputs[IDX['P']] = p_out
 
-        outputs = self.flash_handler.evaluate_pt_flash(inputs)
+        outputs, ineq = self.vle_handler.evaluate(inputs)
 
         # initialise outputs
         vap_outputs = [0] * len(outputs)
@@ -88,12 +91,26 @@ class UnitHandler:
         for s in AQ_SCECIES + SOL_SPECIES:
             aq_outputs[IDX[s]] = outputs[IDX[s]]
 
-        # TODO: include energy balance
+        vap_outputs, ineq_vap = self.sh_handler.evaluate(vap_outputs)
+        aq_outputs, ineq_aq = self.sh_handler.evaluate(aq_outputs)
+        ineqs = ineq + ineq_vap + ineq_aq
 
-        return np.array(vap_outputs), np.array(aq_outputs)
+        enthalpy_out = vap_outputs[IDX['enthalpy_vle']] + aq_outputs[IDX['enthalpy_vle']] + aq_outputs[IDX['enthalpy_s']]
+
+        if self.model.get_equations:
+            enthalpy = maingopy.neg(enthalpy_in)  # tell maingopy this value will always be negative
+        else:
+            enthalpy = enthalpy_in
+        # when the unit is adiabatic scale the heat flow
+        Q = (enthalpy_out - enthalpy_in) / enthalpy
+
+        return np.array(vap_outputs), np.array(aq_outputs), Q, ineqs
 
     def evaluate_filter(self, inputs, liquid_split, solid_split):
         inputs = self.combine_inputs(inputs)
+
+        enthalpy_in = inputs[IDX['enthalpy_vle']] + inputs[IDX['enthalpy_s']]
+
         vle_outputs = [0] * len(inputs)
         s_outputs = [0] * len(inputs)
 
@@ -105,19 +122,40 @@ class UnitHandler:
         for s in (VAP_SCECIES + AQ_SCECIES):
             vle_outputs[IDX[s]] = inputs[IDX[s]] * liquid_split
             s_outputs[IDX[s]] = inputs[IDX[s]] * (1 - liquid_split)
+
         for s in SOL_SPECIES:
             vle_outputs[IDX[s]] = inputs[IDX[s]] * (1 - solid_split)
             s_outputs[IDX[s]] = inputs[IDX[s]] * solid_split
 
-        # TODO: Include energy balance
-        return np.array(vle_outputs), np.array(s_outputs)
+        vle_outputs, ineqs_vle = self.sh_handler.evaluate(vle_outputs)
+        s_outputs, ineqs_s = self.sh_handler.evaluate(s_outputs)
+        ineqs = ineqs_vle + ineqs_s
 
-    def evaluate_change_pt(self, t, p, inputs):
+        enthalpy_out_vle = vle_outputs[IDX['enthalpy_vle']] + vle_outputs[IDX['enthalpy_s']]
+        enthalpy_out_s = s_outputs[IDX['enthalpy_vle']] + s_outputs[IDX['enthalpy_s']]
+        enthalpy_out = enthalpy_out_vle + enthalpy_out_s
+
+        Q = enthalpy_out - enthalpy_in
+
+        return np.array(vle_outputs), np.array(s_outputs), Q, ineqs
+
+    def evaluate_change_pt(self, inputs, t_out, p_out, adiabatic):
         inputs = self.combine_inputs(inputs)
-        inputs[IDX['T']] = t
-        inputs[IDX['P']] = p
-        outputs = self.flash_handler.evaluate_pt_flash(inputs)
-        return outputs
+        enthalpy_in = inputs[IDX['enthalpy_vle']] + inputs[IDX['enthalpy_s']]
+        inputs[IDX['T']] = t_out
+        inputs[IDX['P']] = p_out
+        outputs, ineqs = self.sh_handler.evaluate(inputs)
+        enthalpy_out = outputs[IDX['enthalpy_vle']] + outputs[IDX['enthalpy_s']]
+        if adiabatic:
+            if self.model.get_equations:
+                enthalpy = maingopy.neg(enthalpy_in)  # tell maingopy this value will always be negative
+            else:
+                enthalpy = enthalpy_in
+            # when the unit is adiabatic scale the heat flow
+            Q = (enthalpy_out - enthalpy_in) / enthalpy
+        else:
+            Q = enthalpy_out - enthalpy_in
+        return outputs, Q, ineqs
 
     def combine_inputs(self, inputs):
         if len(inputs) == 1:
@@ -134,12 +172,12 @@ class UnitHandler:
                          inputs[IDX['NaOH_aq']]]
         return np.array(inputs_simple)
 
-    def complicate_tearstream(self, t, p, inputs):
+    def complicate_tearstream(self, inputs, t, p):
         inputs_comp = [0] * len(NAMES)
         inputs_comp[IDX['T']] = t
         inputs_comp[IDX['P']] = p
         inputs_comp[IDX['CO2_vap']] = inputs[0]
         inputs_comp[IDX['H2O_aq']] = inputs[1]
         inputs_comp[IDX['NaOH_aq']] = inputs[2]
-        inputs_comp = self.flash_handler.evaluate_pt_flash(np.array(inputs_comp))
-        return inputs_comp
+        inputs_comp, ineqs = self.sh_handler.evaluate(np.array(inputs_comp))
+        return inputs_comp, ineqs

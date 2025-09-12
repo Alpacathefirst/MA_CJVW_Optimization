@@ -1,7 +1,11 @@
 from constants.c3_imports import *
 from constants.c2_database_values import *
 
-PT_FILE = '1208_VLE_refined_1_1'  # 'A_final_refined_2_1'
+NN_DIR = r'C:\Users\caspe\PycharmProjects\MA_CJVW_Optimization\inputs\d6_trained_nn'
+TRANSFORMERS_DIR = r'C:\Users\caspe\PycharmProjects\MA_CJVW_Optimization\inputs\d7_trained_nn_transformers'
+VLE_FILE = r'DATASET_LOW_P_250911_refined_3_1'
+    # r'DATASET_250911_refined_1_1'
+SH_FILE = r'DATASET_S_H_250911_refined_1_1'
 NN_TYPE = 2  # Type 1: A_CO2, A_H2O, Type 2: Y_H2O, X_CO2, V-Frac
 
 solid_species = ['Magnesite', 'Forsterite', 'Fayalite', 'SiO2(a)']
