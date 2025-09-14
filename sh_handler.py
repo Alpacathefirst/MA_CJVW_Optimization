@@ -5,9 +5,9 @@ from constants.c1_constants import *
 # handling prediction of X, Y, vapor fraction
 class SHHandler:
     def __init__(self, model):
-        self.file = SH_FILE
+        self.file = HS_FILE
         self.dir = NN_DIR
-        self.full_path = f'{NN_DIR}\{SH_FILE}'
+        self.full_path = f'{NN_DIR}\{HS_FILE}'
         self.model = model
         self.ann = maingopy.melonpy.FeedForwardNet()
         # open (define that it is an XML instead of a CSV)
@@ -26,9 +26,9 @@ class SHHandler:
         return scaled
 
     def run_flash_ann(self, inputs):
-        self.co2 = inputs[IDX['CO2_vap']] + inputs[IDX['CO2_aq']]
-        self.h2o = inputs[IDX['H2O_vap']] + inputs[IDX['H2O_aq']]
-        self.naoh = inputs[IDX['NaOH_aq']]
+        self.co2 = inputs[IDX['CO2']]
+        self.h2o = inputs[IDX['H2O']] + inputs[IDX['H2O_aq']]
+        self.naoh = inputs[IDX['NaOH']]
 
         if self.model.get_equations:
             eps = 1e-5
@@ -73,9 +73,7 @@ class SHHandler:
         for entry in NAMES:
             outputs[IDX[entry]] = inputs[IDX[entry]]
 
-        # VLE properties from ANN
-        outputs[IDX['enthalpy_vle']] = ann_outputs[0] * n_total
-        outputs[IDX['entropy_vle']] = ann_outputs[1] * n_total
+
 
         s_outputs = []
         for s in SOL_SPECIES:

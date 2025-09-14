@@ -13,4 +13,4 @@ def get_min_max(file):
     out_min = minmax_out.data_min_
     out_max = minmax_out.data_max_
 
-    return inp_min, inp_max, out_min, out_max
+    return {'min_in': inp_min, 'max_in': inp_max, 'min_out': out_min, 'max_out': out_max}

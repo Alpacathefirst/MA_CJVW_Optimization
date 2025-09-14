@@ -1,3 +1,5 @@
+import numpy as np
+
 from get_min_max import *
 from constants.c1_constants import *
 
@@ -87,44 +89,31 @@ class VLEHandler:
         h2o_vap = n_vap * ann_outputs[0]
         co2_liq = n_liq * ann_outputs[1]
 
-        # recreate the complete output array
-        outputs = [0] * len(NAMES)
-        outputs[IDX['T']] = inputs[IDX['T']]
-        outputs[IDX['P']] = inputs[IDX['P']]
-        outputs[IDX['CO2_vap']] = self.co2 - co2_liq
-        outputs[IDX['N2_vap']] = inputs[IDX['N2_vap']]  # TODO: implement Henries law for N2
-        outputs[IDX['H2O_vap']] = h2o_vap
-        outputs[IDX['CO2_aq']] = co2_liq
-        outputs[IDX['N2_aq']] = inputs[IDX['N2_aq']]  # unchanged for now
-        outputs[IDX['H2O_aq']] = self.h2o - h2o_vap
-        outputs[IDX['NaOH_aq']] = inputs[IDX['NaOH_aq']]
+        # recreate the complete output arrays
+        vap_outputs = [0] * len(NAMES)
+        aq_outputs = [0] * len(NAMES)
 
-        # VLE properties from ANN
-        outputs[IDX['enthalpy_vle']] = ann_outputs[3] * n_total
+        vap_outputs[IDX['T']] = inputs[IDX['T']]
+        vap_outputs[IDX['P']] = inputs[IDX['P']]
 
-        s_outputs = []
-        for s in SOL_SPECIES:
-            outputs[IDX[s]] = inputs[IDX[s]]
-            s_outputs.append(inputs[IDX[s]])
+        vap_outputs[IDX['CO2']] = self.co2 - co2_liq
+        vap_outputs[IDX['H2O']] = h2o_vap
 
-        outputs[IDX['enthalpy_s']] = self.enthalpy_solids(outputs[IDX['T']], np.array(s_outputs))
-
-        return np.array(outputs), ineq
-
-    def get_enthalpy(self, inputs):
-        # ann_outputs: ['Y_H2O', 'X_CO2', 'vapor fraction', 'enthalpy']
-        ann_outputs = self.run_flash_ann(inputs)
-
-        n_total = self.co2 + self.h2o + self.naoh
-        outputs = inputs.tolist()
-        outputs[IDX['enthalpy_vle']] = ann_outputs[3] * n_total
+        aq_outputs[IDX['T']] = inputs[IDX['T']]
+        aq_outputs[IDX['P']] = inputs[IDX['P']]
+        aq_outputs[IDX['CO2']] = co2_liq
+        aq_outputs[IDX['H2O']] = self.h2o - h2o_vap
+        aq_outputs[IDX['NaOH']] = self.naoh
 
         s_outputs = []
         for s in SOL_SPECIES:
+            aq_outputs[IDX[s]] = inputs[IDX[s]]
             s_outputs.append(inputs[IDX[s]])
 
-        outputs[IDX['enthalpy_s']] = self.enthalpy_solids(outputs[IDX['T']], np.array(s_outputs))
-        return np.array(outputs)
+        aq_outputs[IDX['enthalpy_vle']] = self.
+        aq_outputs[IDX['enthalpy_s']] = self.enthalpy_solids(aq_outputs[IDX['T']], np.array(s_outputs))
+
+        return np.array(vap_outputs), np.array(aq_outputs), ineq
 
     def enthalpy_solids(self, t, solids):
         t_ref = 298.15

@@ -3,10 +3,9 @@ from constants.c2_database_values import *
 
 NN_DIR = r'C:\Users\caspe\PycharmProjects\MA_CJVW_Optimization\inputs\d6_trained_nn'
 TRANSFORMERS_DIR = r'C:\Users\caspe\PycharmProjects\MA_CJVW_Optimization\inputs\d7_trained_nn_transformers'
-VLE_FILE = r'DATASET_LOW_P_250911_refined_3_1'
-    # r'DATASET_250911_refined_1_1'
-SH_FILE = r'DATASET_S_H_250911_refined_1_1'
-NN_TYPE = 2  # Type 1: A_CO2, A_H2O, Type 2: Y_H2O, X_CO2, V-Frac
+VLE_FILES = {'with naoh': r'DATASET_LOW_P_250911_refined_3_1', 'no naoh': r'DATASET_VAPOR_250912_refined_3_2'}
+HS_FILES = {'with naoh': r'DATASET_S_H_250911_refined_1_1', 'no naoh': r'DATASET_VAPOR_250912_refined_3_1'}
+ANN_FILES = {'vle': VLE_FILES, 'hs': HS_FILES}
 
 solid_species = ['Magnesite', 'Forsterite', 'Fayalite', 'SiO2(a)']
 
@@ -31,15 +30,13 @@ D = np.array(d)
 
 # Leave T and P at index 0 and 1, otherwise it will break the code
 NAMES = [
-    "T", "P", "CO2_vap", "N2_vap", "H2O_vap",
-    "CO2_aq", "N2_aq", "H2O_aq", "NaOH_aq", "enthalpy_vle", "entropy_vle",
+    "T", "P", "CO2", "H2O", "NaOH", "enthalpy_vle", "entropy_vle",
     "Magnesite", "Forsterite", "Fayalite", "Amorphous_Silica", "enthalpy_s"
 ]
 
 IDX = {name: i for i, name in enumerate(NAMES)}
 
-VAP_SCECIES = ["CO2_vap", "N2_vap", "H2O_vap"]
-AQ_SCECIES = ["CO2_aq", "N2_aq", "H2O_aq", "NaOH_aq"]
+VLE_SPECIES = ["CO2", "H2O", "NaOH"]
 SOL_SPECIES = ["Magnesite", "Forsterite", "Fayalite", "Amorphous_Silica"]
 
 EPSILON = 1e-16
