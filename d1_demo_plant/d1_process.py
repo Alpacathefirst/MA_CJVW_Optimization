@@ -117,7 +117,7 @@ class EvaluateProcess:
                                                 inputs=[p4],
                                                 input_type='with naoh',
                                                 solid_split=1,
-                                                res_moisture=0.2,
+                                                res_moisture=0.88,  # TODO: this is now liquid split factor not res moisture
                                                 t_out=t_filter,
                                                 adiabatic=False)
 

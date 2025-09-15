@@ -147,22 +147,23 @@ class FilterUnit(BaseUnit):
         s_outputs[IDX['T']] = combined_inputs[IDX['T']]
         s_outputs[IDX['P']] = combined_inputs[IDX['P']]
 
-        m_s = 0  # total amount of solids in kg
-        for s in SOL_SPECIES:
-            m_s += combined_inputs[IDX[s]] * MOLAR_MASS[s]
-        m_l = 0
-        for s in VLE_SPECIES:
-            m_l += combined_inputs[IDX[s]] * MOLAR_MASS[s]
-
-        print('ms', m_s)
-        print('ml', m_l)
-        m_s_cake = self.solid_split * m_s
-        # from res_m = m_l_cake / (m_l_cake + m_s_cake)
-        m_l_cake = self.res_moisture / (1 - self.res_moisture) * m_s_cake
-
-        # amount of liquid that is recycled
+        # m_s = 0  # total amount of solids in kg
+        # for s in SOL_SPECIES:
+        #     m_s += combined_inputs[IDX[s]] * MOLAR_MASS[s]
+        # m_l = 0
+        # for s in VLE_SPECIES:
+        #     m_l += combined_inputs[IDX[s]] * MOLAR_MASS[s]
+        #
+        # print('ms', m_s)
+        # print('ml', m_l)
+        # m_s_cake = self.solid_split * m_s
+        # # from res_m = m_l_cake / (m_l_cake + m_s_cake)
+        # m_l_cake = self.res_moisture / (1 - self.res_moisture) * m_s_cake
+        #
+        # # amount of liquid that is recycled
         # liquid_split = 1 - m_l_cake / m_l
-        liquid_split = 0.88
+
+        liquid_split = self.res_moisture
 
         for s in VLE_SPECIES:
             vle_outputs[IDX[s]] = combined_inputs[IDX[s]] * liquid_split

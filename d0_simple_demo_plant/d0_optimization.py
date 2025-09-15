@@ -53,7 +53,7 @@ class Model(maingopy.MAiNGOmodel):
         co2_in = [0] * len(NAMES)
         co2_in[IDX['T']] = 60 + 273.15
         co2_in[IDX['P']] = 100
-        co2_in[IDX['CO2']] = 31
+        co2_in[IDX['CO2']] = 40
 
         sold_liquid = [0] * len(NAMES)
         sold_liquid[IDX['T']] = 30 + 273.15
@@ -81,10 +81,9 @@ class Model(maingopy.MAiNGOmodel):
             result = maingopy.EvaluationContainer()
             # constraints
             # add equalities with result.eq = [equation]
-            print('eq', self.equalities)
             result.eq = self.equalities
             # add inequalities with result.ineq = [equation]
-            # result.ineq = self.inequalities
+            result.ineq = self.inequalities
             result.objective = objective
             return result
 

@@ -29,8 +29,10 @@ class AnnHandler:
 
         if self.model.get_equations:
             co2_frac = co2 / maingopy.pos((co2 + h2o))
+            # co2_frac = co2 / (co2 + h2o)
             if input_type == 'with naoh':
                 molality = naoh / maingopy.pos((h2o * MOLAR_MASS['H2O']))
+                # molality = naoh / (h2o * MOLAR_MASS['H2O'])
             else:
                 molality = 0
 
@@ -95,8 +97,8 @@ class AnnHandler:
         co2_frac_ineq_min = min_in[2] - co2_frac
         co2_frac_ineq_max = co2_frac - max_in[2]
 
-        ineqs = [t_ineq_min, t_ineq_max, p_ineq_min, p_ineq_max, co2_frac_ineq_min, co2_frac_ineq_max, co2_ineq,
-                h2o_ineq, naoh_ineq]
+        # ineqs = [t_ineq_min, t_ineq_max, p_ineq_min, p_ineq_max, co2_ineq, h2o_ineq, naoh_ineq]
+        ineqs = [t_ineq_min, t_ineq_max, p_ineq_min, p_ineq_max, co2_frac_ineq_min, co2_frac_ineq_max, co2_ineq, h2o_ineq, naoh_ineq]
         if input_type == 'with naoh':
             molality_ineq_min = min_in[3] - molality
             molality_ineq_max = molality - max_in[3]
@@ -107,7 +109,6 @@ class AnnHandler:
         else:
             raise Exception(f'Input type {input_type} not supported')
         # drop all float constraints
-        print(ineqs)
         ineqs = [v for v in ineqs if not (isinstance(v, (int, float)))]
         ann_inputs_scaled = self.scale_input(np.array(ann_inputs), ann_type=ann_type, input_type=input_type)
         return ineqs, ann_inputs_scaled
