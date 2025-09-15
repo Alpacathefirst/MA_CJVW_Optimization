@@ -8,18 +8,17 @@ class EvaluateProcess:
 
     def equations(self, process_inputs, optimization_variables, p):
         t_m102 = optimization_variables[0]
-        # t_p102 = optimization_variables[1]
-        t_he101_cold = optimization_variables[1]
-        # t_va101 = optimization_variables[3]
-        # t_f101 = optimization_variables[4]
-        tear_stream_co2, tear_stream_h2o, tear_stream_naoh = optimization_variables[2:]
+        t_p102 = optimization_variables[1]
+        t_he101_cold = optimization_variables[2]
+        pre_tear_stream = optimization_variables[3:]
+        # tear_stream_co2, tear_stream_h2o, tear_stream_naoh = optimization_variables[3:]
         t_r101, p_r101, t_v101, p_v101, t_filter, p_filter = p[0], p[1], p[2], p[3], p[4], p[5]
-        pre_tear_stream = [0] * len(NAMES)
-        pre_tear_stream[IDX['T']] = t_filter
-        pre_tear_stream[IDX['P']] = p_filter
-        pre_tear_stream[IDX['CO2']] = tear_stream_co2
-        pre_tear_stream[IDX['H2O']] = tear_stream_h2o
-        pre_tear_stream[IDX['NaOH']] = tear_stream_naoh
+        # pre_tear_stream = [0] * len(NAMES)
+        # pre_tear_stream[IDX['T']] = t_filter
+        # pre_tear_stream[IDX['P']] = p_filter
+        # pre_tear_stream[IDX['CO2']] = tear_stream_co2
+        # pre_tear_stream[IDX['H2O']] = tear_stream_h2o
+        # pre_tear_stream[IDX['NaOH']] = tear_stream_naoh
         # calculate inputs once to get enthalpies, entropies
         tear_stream = self.unit_handler.stream(inputs=pre_tear_stream,
                                                input_type='with naoh')
@@ -38,8 +37,8 @@ class EvaluateProcess:
                                      input_type='with naoh',
                                      pump_eff=1,
                                      p_out=p_r101,
-                                     t_out=64+273.15,
-                                     adiabatic=False)
+                                     t_out=t_p102,
+                                     adiabatic=True)
         sl3 = self.unit_handler.change_pt(name='HE101_cold',
                                           inputs=[sl2],
                                           input_type='with naoh',
@@ -73,7 +72,7 @@ class EvaluateProcess:
         lr1, product = self.unit_handler.filter(name='F101',
                                                 inputs=[p4],
                                                 input_type='with naoh',
-                                                solid_split=1,
+                                                solid_split=0.98,
                                                 res_moisture=0.2,
                                                 t_out=t_filter,
                                                 adiabatic=False)
@@ -86,7 +85,7 @@ class EvaluateProcess:
 
             # define the objective of the optimization
             molar_balances_squared = []
-            for specie in VLE_SPECIES:
+            for specie in VLE_SPECIES + SOL_SPECIES:
                 molar_balance = (tear_stream[IDX[specie]] - lr1[IDX[specie]]) / maingopy.pos(tear_stream[IDX[specie]])
                 molar_balances_squared.append(molar_balance ** 2)
             sum_molar_balances_squared = sum(np.array(molar_balances_squared))

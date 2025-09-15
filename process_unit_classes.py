@@ -183,3 +183,27 @@ class FilterUnit(BaseUnit):
 class ChangePTUnit(BaseUnit):
     def ann_type(self):
         return 'hs'
+
+
+class SplitterUnit(BaseUnit):
+    def __init__(self, *args, split_factor, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.split_factor = split_factor
+
+    def compute_content(self, combined_inputs):
+        stream_1 = [0] * len(combined_inputs)
+        stream_2 = [0] * len(combined_inputs)
+
+        stream_1[IDX['T']] = combined_inputs[IDX['T']]
+        stream_1[IDX['P']] = combined_inputs[IDX['P']]
+        stream_2[IDX['T']] = combined_inputs[IDX['T']]
+        stream_2[IDX['P']] = combined_inputs[IDX['P']]
+
+        for specie in VLE_SPECIES + SOL_SPECIES:
+            stream_1[IDX[specie]] = combined_inputs[IDX[specie]] * (1 - self.split_factor)
+            stream_2[IDX[specie]] = combined_inputs[IDX[specie]] * self.split_factor
+
+        return [stream_1, stream_2]
+
+    def ann_type(self):
+        return 'hs'
