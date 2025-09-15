@@ -1,4 +1,4 @@
-from d0_simple_demo_plant.process import *
+from d0_simple_demo_plant.d0_process import *
 
 
 # To define a model, we need to spcecialize the MAiNGOmodel class
@@ -19,7 +19,7 @@ class Model(maingopy.MAiNGOmodel):
         # the optimization is done with the normalized version of these values
         unit_variables = [
             maingopy.OptimizationVariable(maingopy.Bounds(300, 400), maingopy.VT_CONTINUOUS, "T_M102"),
-        #     maingopy.OptimizationVariable(maingopy.Bounds(300, 400), maingopy.VT_CONTINUOUS, "T_P102"),
+            maingopy.OptimizationVariable(maingopy.Bounds(300, 400), maingopy.VT_CONTINUOUS, "T_P102"),
             maingopy.OptimizationVariable(maingopy.Bounds(300, 500), maingopy.VT_CONTINUOUS, "T_HE101_COLD")
         #     maingopy.OptimizationVariable(maingopy.Bounds(330, 500), maingopy.VT_CONTINUOUS, "T_VA101"),
         #     maingopy.OptimizationVariable(maingopy.Bounds(330, 500), maingopy.VT_CONTINUOUS, "T_F101")
@@ -30,13 +30,13 @@ class Model(maingopy.MAiNGOmodel):
             # maingopy.OptimizationVariable(maingopy.Bounds(1, 150), maingopy.VT_CONTINUOUS, "P_LR1"),
             maingopy.OptimizationVariable(maingopy.Bounds(5, 10), maingopy.VT_CONTINUOUS, "CO2_LR1"),
             maingopy.OptimizationVariable(maingopy.Bounds(400, 450), maingopy.VT_CONTINUOUS, "H2O_LR1"),
-            maingopy.OptimizationVariable(maingopy.Bounds(5, 15), maingopy.VT_CONTINUOUS, "NaOH_LR1")
+            maingopy.OptimizationVariable(maingopy.Bounds(5, 15), maingopy.VT_CONTINUOUS, "NaOH_LR1"),
             # maingopy.OptimizationVariable(maingopy.Bounds(-1e12, 0), maingopy.VT_CONTINUOUS, "H_vle_LR1"),
             # maingopy.OptimizationVariable(maingopy.Bounds(-1e12, 1e12), maingopy.VT_CONTINUOUS, "S_vle_LR1"),
-            # maingopy.OptimizationVariable(maingopy.Bounds(0, 100), maingopy.VT_CONTINUOUS, "Magnesite_LR1"),
-            # maingopy.OptimizationVariable(maingopy.Bounds(0, 100), maingopy.VT_CONTINUOUS, "Forsterite_LR1"),
-            # maingopy.OptimizationVariable(maingopy.Bounds(0, 100), maingopy.VT_CONTINUOUS, "Fayalite_LR1"),
-            # maingopy.OptimizationVariable(maingopy.Bounds(0, 100), maingopy.VT_CONTINUOUS, "Amorphous_Silica_LR1"),
+            maingopy.OptimizationVariable(maingopy.Bounds(1e-9, 1), maingopy.VT_CONTINUOUS, "Magnesite_LR1"),
+            maingopy.OptimizationVariable(maingopy.Bounds(1e-9, 1), maingopy.VT_CONTINUOUS, "Forsterite_LR1"),
+            maingopy.OptimizationVariable(maingopy.Bounds(1e-9, 1), maingopy.VT_CONTINUOUS, "Fayalite_LR1"),
+            maingopy.OptimizationVariable(maingopy.Bounds(1e-9, 1), maingopy.VT_CONTINUOUS, "Amorphous_Silica_LR1"),
             # maingopy.OptimizationVariable(maingopy.Bounds(-1e12, 0), maingopy.VT_CONTINUOUS, "H_s_LR1")
         ]
 
@@ -68,7 +68,7 @@ class Model(maingopy.MAiNGOmodel):
         parameters = [
             170 + 273.15,  # t_reactor
             100,  # p_reactor
-            70 + 273.15,  # t_flash
+            69.218 + 273.15,  # t_flash
             1,  # p_flash
             69.218 + 273.15,  # t_filter
             1  # p_tearstream
