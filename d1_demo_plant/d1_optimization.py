@@ -18,31 +18,29 @@ class Model(maingopy.MAiNGOmodel):
         # define bounds of the original variables, so that it rescales the results of the optimization
         # the optimization is done with the normalized version of these values
 
-        unit_variables = [
-            maingopy.OptimizationVariable(maingopy.Bounds(300, 400), maingopy.VT_CONTINUOUS, "T_M101"),
-            maingopy.OptimizationVariable(maingopy.Bounds(300, 500), maingopy.VT_CONTINUOUS, "T_C101"),
-            maingopy.OptimizationVariable(maingopy.Bounds(300, 500), maingopy.VT_CONTINUOUS, "T_VA101"),
-            maingopy.OptimizationVariable(maingopy.Bounds(300, 400), maingopy.VT_CONTINUOUS, "T_M102"),
-            maingopy.OptimizationVariable(maingopy.Bounds(300, 500), maingopy.VT_CONTINUOUS, "T_P102"),
-            maingopy.OptimizationVariable(maingopy.Bounds(300, 400), maingopy.VT_CONTINUOUS, "T_HE101_COLD")
-        ]
-
         tear_stream_vars = [
             # L-R1 tear stream
-            maingopy.OptimizationVariable(maingopy.Bounds(300, 400), maingopy.VT_CONTINUOUS, "T_LR1"),
-            maingopy.OptimizationVariable(maingopy.Bounds(1, 150), maingopy.VT_CONTINUOUS, "P_LR1"),
-            maingopy.OptimizationVariable(maingopy.Bounds(5, 10), maingopy.VT_CONTINUOUS, "CO2_LR1"),
+            maingopy.OptimizationVariable(maingopy.Bounds(1, 20), maingopy.VT_CONTINUOUS, "CO2_LR1"),
             maingopy.OptimizationVariable(maingopy.Bounds(400, 450), maingopy.VT_CONTINUOUS, "H2O_LR1"),
-            maingopy.OptimizationVariable(maingopy.Bounds(5, 15), maingopy.VT_CONTINUOUS, "NaOH_LR1"),
-
+            maingopy.OptimizationVariable(maingopy.Bounds(1, 20), maingopy.VT_CONTINUOUS, "NaOH_LR1"),
+            maingopy.OptimizationVariable(maingopy.Bounds(1e-9, 10), maingopy.VT_CONTINUOUS, "Magnesite_LR1"),
+            maingopy.OptimizationVariable(maingopy.Bounds(1e-9, 10), maingopy.VT_CONTINUOUS, "Forsterite_LR1"),
+            maingopy.OptimizationVariable(maingopy.Bounds(1e-9, 10), maingopy.VT_CONTINUOUS, "Fayalite_LR1"),
+            maingopy.OptimizationVariable(maingopy.Bounds(1e-9, 10), maingopy.VT_CONTINUOUS, "Amorphous_Silica_LR1"),
             # V-R4 tear stream
-            maingopy.OptimizationVariable(maingopy.Bounds(300, 400), maingopy.VT_CONTINUOUS, "T_VR4"),
-            maingopy.OptimizationVariable(maingopy.Bounds(50, 150), maingopy.VT_CONTINUOUS, "P_VR4"),
             maingopy.OptimizationVariable(maingopy.Bounds(50, 150), maingopy.VT_CONTINUOUS, "CO2_VR4"),
-            maingopy.OptimizationVariable(maingopy.Bounds(1e-3, 1), maingopy.VT_CONTINUOUS, "H2O_VR4"),
+            maingopy.OptimizationVariable(maingopy.Bounds(1e-3, 1), maingopy.VT_CONTINUOUS, "H2O_VR4")
         ]
 
-        variables = unit_variables + tear_stream_vars
+        unit_variables = [
+            maingopy.OptimizationVariable(maingopy.Bounds(300, 400), maingopy.VT_CONTINUOUS, "T_C101"),
+            maingopy.OptimizationVariable(maingopy.Bounds(400, 500), maingopy.VT_CONTINUOUS, "T_VA101"),
+            maingopy.OptimizationVariable(maingopy.Bounds(300, 400), maingopy.VT_CONTINUOUS, "T_M102"),
+            maingopy.OptimizationVariable(maingopy.Bounds(300, 500), maingopy.VT_CONTINUOUS, "T_P102"),
+            maingopy.OptimizationVariable(maingopy.Bounds(300, 500), maingopy.VT_CONTINUOUS, "T_HE101_COLD")
+        ]
+
+        variables = tear_stream_vars + unit_variables
         return variables
 
     # We need to implement the evaluate function that computes the values of the objective and constraints from the
@@ -70,7 +68,7 @@ class Model(maingopy.MAiNGOmodel):
         parameters = [
             170 + 273.15,  # t_reactor
             100,  # p_reactor
-            70 + 273.15,  # t_flash
+            69.08 + 273.15,  # t_flash
             1,  # p_flash
             69.218 + 273.15,  # t_filter
             1,  # p_tearstream
@@ -85,10 +83,9 @@ class Model(maingopy.MAiNGOmodel):
             result = maingopy.EvaluationContainer()
             # constraints
             # add equalities with result.eq = [equation]
-            print('eq', self.equalities)
             result.eq = self.equalities
             # add inequalities with result.ineq = [equation]
-            result.ineq = self.inequalities
+            # result.ineq = self.inequalities
             result.objective = objective
             return result
 
@@ -121,9 +118,6 @@ print(maingoStatus)
 
 # Get numeric solution values
 solution_vars = myMAiNGO.get_solution_point()
-print("Global optimum of the surrogate model: f([{}, {}]) = {}".format(
-    solution_vars[0], solution_vars[1], myMAiNGO.get_objective_value(),
-))
 
 # evaluate model
 
@@ -131,16 +125,19 @@ print("Global optimum of the surrogate model: f([{}, {}]) = {}".format(
 # Post-Optimization Evaluation
 # ========================
 
-solution_vars = [60+273.15, 63+273.15, 166+273, 62+273, 63+273, 160+273, 70+273, 1, 8.77, 417, 9, 60+273.15, 95, 102, 0.53]
-
+# solution_vars = [8.77, 418, 9, 101.89, 0.53]
+print('solution vars', solution_vars)
 myModel.get_equations = False
 myModel.optimal_vars = solution_vars
-stream_outputs = myModel.evaluate(solution_vars)
+tear_stream_errors, stream_outputs = myModel.evaluate(solution_vars)
 
 
 def to_celsius(t):
     return t - 273.15
 
+
+for specie, error in tear_stream_errors.items():
+    print(specie, error)
 
 # nicely display the output
 for name, stream in stream_outputs.items():

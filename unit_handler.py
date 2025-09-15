@@ -15,7 +15,7 @@ class UnitHandler:
         return MixerUnit(model=self.model, ann_handler=self.ann, name=name, inputs=inputs, input_type=input_type,
                          t_out=t_out, p_out=p_out, adiabatic=adiabatic).run()
 
-    def flash(self, name, inputs, input_type, t_out, p_out=None, adiabatic=True):
+    def flash(self, name, inputs, input_type, t_out, p_out=None, adiabatic=False):
         return FlashUnit(model=self.model, ann_handler=self.ann, name=name, inputs=inputs, input_type=input_type,
                          t_out=t_out, p_out=p_out, adiabatic=adiabatic).run()
 
@@ -35,3 +35,7 @@ class UnitHandler:
     def change_pt(self, name, inputs, input_type, t_out=None, p_out=None, adiabatic=False):
         return ChangePTUnit(model=self.model, ann_handler=self.ann, name=name, inputs=inputs, input_type=input_type,
                             t_out=t_out, p_out=p_out, adiabatic=adiabatic).run()
+
+    def splitter(self, name, inputs, input_type, split_factor, t_out=None, p_out=None, adiabatic=False):
+        return SplitterUnit(model=self.model, ann_handler=self.ann, name=name, inputs=inputs, input_type=input_type,
+                            split_factor=split_factor, t_out=t_out, p_out=p_out, adiabatic=adiabatic).run()

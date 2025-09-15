@@ -29,10 +29,8 @@ class AnnHandler:
 
         if self.model.get_equations:
             co2_frac = co2 / maingopy.pos((co2 + h2o))
-            # co2_frac = co2 / (co2 + h2o)
             if input_type == 'with naoh':
                 molality = naoh / maingopy.pos((h2o * MOLAR_MASS['H2O']))
-                # molality = naoh / (h2o * MOLAR_MASS['H2O'])
             else:
                 molality = 0
 
@@ -97,8 +95,9 @@ class AnnHandler:
         co2_frac_ineq_min = min_in[2] - co2_frac
         co2_frac_ineq_max = co2_frac - max_in[2]
 
-        # ineqs = [t_ineq_min, t_ineq_max, p_ineq_min, p_ineq_max, co2_ineq, h2o_ineq, naoh_ineq]
-        ineqs = [t_ineq_min, t_ineq_max, p_ineq_min, p_ineq_max, co2_frac_ineq_min, co2_frac_ineq_max, co2_ineq, h2o_ineq, naoh_ineq]
+        ineqs = [t_ineq_min, t_ineq_max, p_ineq_min, p_ineq_max, co2_ineq, h2o_ineq, naoh_ineq]
+        # ineqs = [t_ineq_min, t_ineq_max, p_ineq_min, p_ineq_max, co2_frac_ineq_min, co2_frac_ineq_max, co2_ineq, h2o_ineq, naoh_ineq]
+
         if input_type == 'with naoh':
             molality_ineq_min = min_in[3] - molality
             molality_ineq_max = molality - max_in[3]

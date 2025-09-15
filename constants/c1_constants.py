@@ -3,8 +3,8 @@ from constants.c2_database_values import *
 
 NN_DIR = r'C:\Users\caspe\PycharmProjects\MA_CJVW_Optimization\inputs\d6_trained_nn'
 TRANSFORMERS_DIR = r'C:\Users\caspe\PycharmProjects\MA_CJVW_Optimization\inputs\d7_trained_nn_transformers'
-VLE_FILES = {'with naoh': r'DATASET_LOW_P_250911_refined_3_1', 'no naoh': r'DATASET_VAPOR_250912_refined_3_2'}
-# VLE_FILES = {'with naoh': r'DATASET_250911_refined_1_1', 'no naoh': r'DATASET_VAPOR_250912_refined_3_2'}
+# VLE_FILES = {'with naoh': r'DATASET_LOW_P_250911_refined_3_1', 'no naoh': r'DATASET_VAPOR_250912_refined_3_2'}
+VLE_FILES = {'with naoh': r'DATASET_250911_refined_1_1', 'no naoh': r'DATASET_VAPOR_250912_refined_3_2'}
 HS_FILES = {'with naoh': r'DATASET_S_H_250911_refined_1_1', 'no naoh': r'DATASET_VAPOR_250912_refined_3_1'}
 ANN_FILES = {'vle': VLE_FILES, 'hs': HS_FILES}
 
