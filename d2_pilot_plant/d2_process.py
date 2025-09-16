@@ -7,13 +7,7 @@ class EvaluateProcess:
         self.unit_handler = UnitHandler(model)
 
     def equations(self, process_inputs, optimization_variables, p):
-        # solution_vars = [60 + 273.15, 63 + 273.15, 166 + 273, 62 + 273, 63 + 273, 160 + 273, 70 + 273, 1, 8.77, 417, 9,
-        #                  60 + 273.15, 95, 102, 0.53]
-        #
-        # t_m101_const, t_c101_const, t_va101, t_m102_const, t_p102, t_he101_cold = solution_vars[:6]
-
-        t_r101, p_r101, t_v101, p_v101, t_filter, p_filter, t_co2_tank, p_co2_tank = \
-            p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]
+        t_r101, p_r101, t_v101, p_v101, t_filter, p_filter, t_co2_tank, p_co2_tank, p_v102, p_v103, p_v104 = p[0:]
 
         lr1_pre_tear_stream = [0] * len(NAMES)
         lr1_co2, lr1_h2o, lr1_naoh, lr1_magnesite, lr1_forsterite, lr1_fayalite, lr1_sio2 = optimization_variables[0:7]
@@ -35,29 +29,10 @@ class EvaluateProcess:
         vr4_pre_tear_stream[IDX['H2O']] = vr4_h2o
 
         t_c101 = optimization_variables[9]
-        t_c101_isen = optimization_variables[10]
-        t_va101 = optimization_variables[11]
-        t_m102 = optimization_variables[12]
-        t_p102 = optimization_variables[13]
-        t_he101_cold = optimization_variables[14]
-        #
-        # t_r101, p_r101, t_v101, p_v101, t_filter, p_filter, t_co2_tank, p_co2_tank = \
-        #     p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]
-        #
-        # lr1_pre_tear_stream = [0] * len(NAMES)
-        # lr1_co2, lr1_h2o, lr1_naoh = optimization_variables[6], optimization_variables[7], optimization_variables[8]
-        # lr1_pre_tear_stream[IDX['T']] = t_filter
-        # lr1_pre_tear_stream[IDX['P']] = p_filter
-        # lr1_pre_tear_stream[IDX['CO2']] = lr1_co2
-        # lr1_pre_tear_stream[IDX['H2O']] = lr1_h2o
-        # lr1_pre_tear_stream[IDX['NaOH']] = lr1_naoh
-        #
-        # vr4_pre_tear_stream = [0] * len(NAMES)
-        # vr4_co2, vr4_h2o = optimization_variables[9], optimization_variables[10]
-        # vr4_pre_tear_stream[IDX['T']] = t_co2_tank
-        # vr4_pre_tear_stream[IDX['P']] = p_co2_tank
-        # vr4_pre_tear_stream[IDX['CO2']] = vr4_co2
-        # vr4_pre_tear_stream[IDX['H2O']] = vr4_h2o
+        t_va101 = optimization_variables[10]
+        t_m102 = optimization_variables[11]
+        t_p102 = optimization_variables[12]
+        t_he101_cold = optimization_variables[13]
 
         # make sure input streams are in equilibrium
         lr1_tear_stream = self.unit_handler.stream(inputs=lr1_pre_tear_stream,
@@ -80,11 +55,10 @@ class EvaluateProcess:
                                                  input_type='no naoh',
                                                  split_factor=0.1,
                                                  adiabatic=False)
-        v4 = self.unit_handler.compressor(name='C101',
+        v4 = self.unit_handler.pump(name='C101',
                                     inputs=[v3],
                                     input_type='no naoh',
-                                    isentropic_eff=0.9,
-                                    t_isen=t_c101_isen,
+                                    pump_eff=1,
                                     t_out=t_c101,
                                     p_out=p_r101,
                                     adiabatic=True)
@@ -138,29 +112,70 @@ class EvaluateProcess:
                                               input_type='no naoh',
                                               t_out=t_co2_tank,
                                               adiabatic=False)
-        p2 = self.unit_handler.change_pt(name='HE101_hot',
+        p2 = self.unit_handler.change_pt(name='VA-102',
                                          inputs=[p1],
+                                         input_type='with naoh',
+                                         t_out=t_r101,
+                                         p_out=p_v102,
+                                         adiabatic=False)
+        vv2, p3 = self.unit_handler.flash(name='V-102',
+                                          inputs=[p2],
+                                          input_type='with naoh',
+                                          adiabatic=False)
+        p4 = self.unit_handler.change_pt(name='VA-103',
+                                         inputs=[p3],
+                                         input_type='with naoh',
+                                         t_out=t_r101,
+                                         p_out=p_v103)
+        vv3, p5 = self.unit_handler.flash(name='V-103',
+                                          inputs=[p4],
+                                          input_type='with naoh',
+                                          adiabatic=False)
+        p6 = self.unit_handler.change_pt(name='VA-104',
+                                         inputs=[p5],
+                                         input_type='with naoh',
+                                         t_out=t_r101,
+                                         p_out=p_v104)
+        vv4, p7 = self.unit_handler.flash(name='V-104',
+                                          inputs=[p4],
+                                          input_type='with naoh',
+                                          adiabatic=False)
+        p8 = self.unit_handler.change_pt(name='HE101_hot',
+                                         inputs=[p7],
                                          input_type='with naoh',
                                          t_out=sl2[IDX['T']] + 10,
                                          adiabatic=False)
-        p3 = self.unit_handler.change_pt(name='VA101',
-                                         inputs=[p2],
+        p9 = self.unit_handler.change_pt(name='VA105',
+                                         inputs=[p8],
                                          input_type='with naoh',
                                          t_out=t_v101,
                                          p_out=p_v101,
                                          adiabatic=False)
-        gpurge, p4 = self.unit_handler.flash(name='V101',
-                                             inputs=[p3],
-                                             input_type='with naoh',
-                                             t_out=t_v101,
-                                             adiabatic=False)
         lr1, product = self.unit_handler.filter(name='F101',
-                                                inputs=[p4],
+                                                inputs=[p9],
                                                 input_type='with naoh',
                                                 solid_split=0.99,
-                                                res_moisture=0.9,  # TODO: this is now liquid split factor not res moisture
+                                                res_moisture=0.9,
+                                                # TODO: this is now liquid split factor not res moisture
                                                 t_out=t_filter,
                                                 adiabatic=False)
+
+        vc4 = self.unit_handler.compressor(name='C-104',
+                                           inputs=[vv4],
+                                           input_type='no naoh',
+                                           isentropic_eff=0.9,
+                                           t_isen=t_c104,
+                                           t_out=t_c104_isen,
+                                           p_out=p_v103)
+        vc3 = self.unit_handler.compressor(name='C-103',
+                                           inputs=[vv3],
+                                           input_type='no naoh',
+                                           isentropic_eff=0.9,
+                                           t_isen=t_c103_isen,
+                                           t_out=t_c103,
+                                           p_out=p_v102)
+        vc2 = self.unit_handler.compressor(name='C-')
+
 
         if self.model.get_equations:
             # equality contraint for HE101
@@ -189,11 +204,11 @@ class EvaluateProcess:
             for specie in VLE_SPECIES + SOL_SPECIES:
                 den1 = (lr1_tear_stream[IDX[specie]])
                 molar_balance = (lr1_tear_stream[IDX[specie]] - lr1[IDX[specie]]) / den1 if den1 > 0 else 0.0
-                tear_streams_errors[f'lr1_{specie}'] = molar_balance
+                tear_streams_errors[specie] = molar_balance
             for specie in ['CO2', 'H2O']:
                 den2 = vr4_tear_stream[IDX[specie]]
                 molar_balance = (vr4_tear_stream[IDX[specie]] - vr4[IDX[specie]]) / den2 if den2 > 0 else 0.0
-                tear_streams_errors[f'vr4_{specie}'] = molar_balance
+                tear_streams_errors[specie] = molar_balance
 
             stream_dict = {
                 # 'V-1': v1,

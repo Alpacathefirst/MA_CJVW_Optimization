@@ -11,23 +11,23 @@ class UnitHandler:
         self.model.inequalities += ineq
         return output[0]
 
-    def mixer(self, name, inputs, input_type, t_out, p_out=None, adiabatic=True):
+    def mixer(self, name, inputs, input_type, t_out=None, p_out=None, adiabatic=True):
         return MixerUnit(model=self.model, ann_handler=self.ann, name=name, inputs=inputs, input_type=input_type,
                          t_out=t_out, p_out=p_out, adiabatic=adiabatic).run()
 
-    def flash(self, name, inputs, input_type, t_out, p_out=None, adiabatic=False):
+    def flash(self, name, inputs, input_type, t_out=None, p_out=None, adiabatic=False):
         return FlashUnit(model=self.model, ann_handler=self.ann, name=name, inputs=inputs, input_type=input_type,
                          t_out=t_out, p_out=p_out, adiabatic=adiabatic).run()
 
-    def reactor(self, name, inputs, input_type, frac_conversion, t_out, p_out=None, adiabatic=False):
+    def reactor(self, name, inputs, input_type, frac_conversion, t_out=None, p_out=None, adiabatic=False):
         return ReactorUnit(model=self.model, ann_handler=self.ann, name=name, inputs=inputs, input_type=input_type,
                            frac_conversion=frac_conversion, t_out=t_out, p_out=p_out, adiabatic=adiabatic).run()
 
-    def pump(self, name, inputs, input_type, pump_eff, t_out, p_out=None, adiabatic=True):
+    def pump(self, name, inputs, input_type, pump_eff, t_out=None, p_out=None, adiabatic=True):
         return PumpUnit(model=self.model, ann_handler=self.ann, name=name, inputs=inputs, input_type=input_type,
                         pump_eff=pump_eff, t_out=t_out, p_out=p_out, adiabatic=adiabatic).run()
 
-    def filter(self, name, inputs, input_type, solid_split, res_moisture, t_out, p_out=None, adiabatic=True):
+    def filter(self, name, inputs, input_type, solid_split, res_moisture, t_out=None, p_out=None, adiabatic=True):
         return FilterUnit(model=self.model, ann_handler=self.ann, name=name, inputs=inputs, input_type=input_type,
                           solid_split=solid_split, res_moisture=res_moisture,
                           t_out=t_out, p_out=p_out, adiabatic=adiabatic).run()
@@ -39,3 +39,8 @@ class UnitHandler:
     def splitter(self, name, inputs, input_type, split_factor, t_out=None, p_out=None, adiabatic=False):
         return SplitterUnit(model=self.model, ann_handler=self.ann, name=name, inputs=inputs, input_type=input_type,
                             split_factor=split_factor, t_out=t_out, p_out=p_out, adiabatic=adiabatic).run()
+
+    def compressor(self, name, inputs, input_type, isentropic_eff, t_isen, t_out, p_out, adiabatic=True):
+        return CompressorUnit(model=self.model, ann_handler=self.ann, name=name, inputs=inputs, input_type=input_type,
+                              isentropic_eff=isentropic_eff, t_isen=t_isen, t_out=t_out, p_out=p_out,
+                              adiabatic=adiabatic).run()

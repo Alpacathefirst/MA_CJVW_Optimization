@@ -1,4 +1,4 @@
-from d1_demo_plant.d1_process import *
+from d2_pilot_plant.d2_process import *
 
 
 # To define a model, we need to spcecialize the MAiNGOmodel class
@@ -23,10 +23,10 @@ class Model(maingopy.MAiNGOmodel):
             maingopy.OptimizationVariable(maingopy.Bounds(1, 20), maingopy.VT_CONTINUOUS, "CO2_LR1"),
             maingopy.OptimizationVariable(maingopy.Bounds(100, 600), maingopy.VT_CONTINUOUS, "H2O_LR1"),
             maingopy.OptimizationVariable(maingopy.Bounds(1, 20), maingopy.VT_CONTINUOUS, "NaOH_LR1"),
-            maingopy.OptimizationVariable(maingopy.Bounds(1e-9, 1), maingopy.VT_CONTINUOUS, "Magnesite_LR1"),
-            maingopy.OptimizationVariable(maingopy.Bounds(1e-9, 1), maingopy.VT_CONTINUOUS, "Forsterite_LR1"),
-            maingopy.OptimizationVariable(maingopy.Bounds(1e-9, 1), maingopy.VT_CONTINUOUS, "Fayalite_LR1"),
-            maingopy.OptimizationVariable(maingopy.Bounds(1e-9, 1), maingopy.VT_CONTINUOUS, "Amorphous_Silica_LR1"),
+            maingopy.OptimizationVariable(maingopy.Bounds(1e-9, 10), maingopy.VT_CONTINUOUS, "Magnesite_LR1"),
+            maingopy.OptimizationVariable(maingopy.Bounds(1e-9, 10), maingopy.VT_CONTINUOUS, "Forsterite_LR1"),
+            maingopy.OptimizationVariable(maingopy.Bounds(1e-9, 10), maingopy.VT_CONTINUOUS, "Fayalite_LR1"),
+            maingopy.OptimizationVariable(maingopy.Bounds(1e-9, 10), maingopy.VT_CONTINUOUS, "Amorphous_Silica_LR1"),
             # V-R4 tear stream
             maingopy.OptimizationVariable(maingopy.Bounds(10, 200), maingopy.VT_CONTINUOUS, "CO2_VR4"),
             maingopy.OptimizationVariable(maingopy.Bounds(1e-3, 10), maingopy.VT_CONTINUOUS, "H2O_VR4")
@@ -34,7 +34,6 @@ class Model(maingopy.MAiNGOmodel):
 
         unit_variables = [
             maingopy.OptimizationVariable(maingopy.Bounds(300, 400), maingopy.VT_CONTINUOUS, "T_C101"),
-            maingopy.OptimizationVariable(maingopy.Bounds(300, 400), maingopy.VT_CONTINUOUS, "T_C101_ISENTROPIC"),
             maingopy.OptimizationVariable(maingopy.Bounds(400, 500), maingopy.VT_CONTINUOUS, "T_VA101"),
             maingopy.OptimizationVariable(maingopy.Bounds(300, 400), maingopy.VT_CONTINUOUS, "T_M102"),
             maingopy.OptimizationVariable(maingopy.Bounds(300, 500), maingopy.VT_CONTINUOUS, "T_P102"),
@@ -86,7 +85,7 @@ class Model(maingopy.MAiNGOmodel):
             # add equalities with result.eq = [equation]
             result.eq = self.equalities
             # add inequalities with result.ineq = [equation]
-            result.ineq = self.inequalities
+            # result.ineq = self.inequalities
             result.objective = objective
             return result
 
@@ -126,7 +125,7 @@ solution_vars = myMAiNGO.get_solution_point()
 # Post-Optimization Evaluation
 # ========================
 
-# solution_vars = [8.77, 416.87, 9, 0.288, 0.007, 0.101, 0.144, 101.89, 0.53, 61.9+273, 62+273, 167+273, 62.85755+273, 62+273, 160]
+# solution_vars = [8.77, 418, 9, 101.89, 0.53]
 print('solution vars', solution_vars)
 myModel.get_equations = False
 myModel.optimal_vars = solution_vars
