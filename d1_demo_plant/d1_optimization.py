@@ -67,13 +67,13 @@ class Model(maingopy.MAiNGOmodel):
         proccess_inputs = [np.array(co2_in), np.array(sold_liquid)]
 
         parameters = [
-            170 + 273.15,  # t_reactor
-            100,  # p_reactor
-            69.08 + 273.15,  # t_flash
+            170 + 273.15,  # t_r101
+            100,  # p_r101
+            60 + 273.15,  # t_v101
             1,  # p_flash
-            69.218 + 273.15,  # t_filter
+            25 + 273.15,  # t_filter
             1,  # p_tearstream
-            60+273.15,  # t_co2_tank
+            60 + 273.15,  # t_co2_tank
             95  # p_co2_tank
         ]
 

@@ -133,6 +133,7 @@ class PumpUnit(BaseUnit):
     def __init__(self, *args, pump_eff, **kwargs):
         super().__init__(*args, **kwargs)
         self.pump_eff = pump_eff
+        self.power = 0
 
     def compute_content(self, combined_inputs):
         content = combined_inputs
@@ -143,9 +144,17 @@ class PumpUnit(BaseUnit):
         delta_p = self.p_out - combined_inputs[IDX['P']]
         volume_flow = combined_inputs[IDX['H2O']] * MOLAR_MASS['H2O'] / 1000  # in m3 / time_unit
         power = delta_p * volume_flow / self.pump_eff  # pump efficiency = 1
-        content = combined_inputs
-        content[IDX['enthalpy_vle']] += power
+        self.power = power
         return [content]
+
+    def enthalpy_balance(self, adiabatic):
+        h_out = self.outputs[0][IDX['enthalpy_vle']] + self.outputs[0][IDX['enthalpy_s']]
+        if adiabatic:
+            base = maingopy.neg(self.h_in) if self.model.get_equations else self.h_in
+            eq = (h_out - self.h_in - self.power) / base
+            print(self.name, eq)
+            self.equalities.append(eq)
+        return h_out - self.h_in - self.power
 
     def ann_type(self):
         return 'hs'
@@ -255,6 +264,7 @@ class CompressorUnit(BaseUnit):
         content = [0] * len(combined_inputs)
         iso_content = [0] * len(combined_inputs)
 
+        self.t_input = combined_inputs[IDX['T']]
         content[IDX['T']] = self.t_out
         content[IDX['P']] = self.p_out
         iso_content[IDX['T']] = self.t_isen
@@ -269,23 +279,50 @@ class CompressorUnit(BaseUnit):
         return [content, iso_content]
 
     def get_equalities(self, contents):
-        iso_content = contents[1]
         # output[0] is the actual output and output[1] is the isentropic output
-        s_in = iso_content[IDX['entropy_vle']]
+        s_in = self.get_absolute_entropy_input()
 
-        s_out_isentropic = self.outputs[1][IDX['entropy_vle']]
+        iso_output = self.outputs[1]
+        s_out_isentropic = self.get_absolute_entropy(iso_output)
+
         h_out_isentropic = self.outputs[1][IDX['enthalpy_vle']] + self.outputs[1][IDX['enthalpy_s']]
 
         h_out = self.outputs[0][IDX['enthalpy_vle']] + self.outputs[0][IDX['enthalpy_s']]
 
-        base_s = maingopy.pos((s_in ** 2 + 0.01)**0.5) if self.model.get_equations else s_in
+        base_s = maingopy.pos((s_in ** 2 + s_out_isentropic ** 2)**0.5) if self.model.get_equations else ((s_in ** 2 + s_out_isentropic ** 2)**0.5)
         base_h = maingopy.neg(self.h_in)
 
-        s_eq = (s_out_isentropic - s_in) / base_s
+        s_eq = (s_out_isentropic - s_in) / (base_s + 50)
+        # print(self.name, s_out_isentropic, s_in, base_s)
+        # print(self.name, s_eq)
 
         # efficiency: eta = (h2s - h1) / (h2 - h1)  =>  eta*(h2 - h1) - (h2s - h1) = 0
         h_eq = (self.isentropic_eff * (h_out - self.h_in) - (h_out_isentropic - self.h_in)) / base_h
         return [s_eq, h_eq]
+
+    def get_absolute_entropy(self, stream):
+        # total amount of these species is needed later
+        n_total = stream[IDX['CO2']] + stream[IDX['H2O']]
+
+        def s_correction(sp: str):
+            # s_cor = x_specie * (Hf_specie - Gf_specie)/T + S298 - S298 * Tref_specie/T
+            d = THERMOCHEMICAL_DATA[sp]
+            return (stream[IDX[sp]] / maingopy.pos(n_total)) * ((d["Hf298"] - d["Gf298"]) / stream[IDX['T']] + d["S298"] * (1.0 - d["Tref"] / stream[IDX['T']]))
+
+        s_cor_mix = 0
+        for sp in ['CO2', 'H2O']:
+            s_cor_mix += s_correction(sp)
+
+        s_abs = stream[IDX['entropy_vle']] - n_total * s_cor_mix
+
+        print('MOLAR ENTROPY', stream[IDX['T']], stream[IDX['entropy_vle']] / n_total, n_total, s_cor_mix, s_abs)
+        return s_abs
+
+    def get_absolute_entropy_input(self):
+        s_abs = 0
+        for i in self.inputs:
+            s_abs += self.get_absolute_entropy(i)
+        return s_abs
 
     def enthalpy_balance(self, adiabatic):
         h_out = self.outputs[0][IDX['enthalpy_vle']] + self.outputs[0][IDX['enthalpy_s']]

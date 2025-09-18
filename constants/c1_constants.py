@@ -42,6 +42,11 @@ SOL_SPECIES = ["Magnesite", "Forsterite", "Fayalite", "Amorphous_Silica"]
 
 EPSILON = 1e-16
 
+# Thermochemical data at 298.15 K (J/mol, J/mol/K)
+THERMOCHEMICAL_DATA = {
+    "CO2": {"Tref": 298.15, "S298": 213.7, "Hf298": -393_510.0, "Gf298": -394_350.0},
+    "H2O": {"Tref": 298.15, "S298": 188.8, "Hf298": -241_810.0, "Gf298": -228_560.0},
+}
 # molar masses in kg/mol
 MOLAR_MASS = {
     "CO2": 0.0440095,

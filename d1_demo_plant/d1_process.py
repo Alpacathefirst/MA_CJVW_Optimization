@@ -81,13 +81,13 @@ class EvaluateProcess:
                                                  split_factor=0.1,
                                                  adiabatic=False)
         v4 = self.unit_handler.compressor(name='C101',
-                                    inputs=[v3],
-                                    input_type='no naoh',
-                                    isentropic_eff=0.9,
-                                    t_isen=t_c101_isen,
-                                    t_out=t_c101,
-                                    p_out=p_r101,
-                                    adiabatic=True)
+                                          inputs=[v3],
+                                          input_type='no naoh',
+                                          isentropic_eff=0.9,
+                                          t_isen=t_c101_isen,
+                                          t_out=t_c101,
+                                          p_out=p_r101,
+                                          adiabatic=True)
 
         sl1 = self.unit_handler.mixer(name='M102',
                                       inputs=[solid_liquid, lr1_tear_stream],
@@ -158,7 +158,8 @@ class EvaluateProcess:
                                                 inputs=[p4],
                                                 input_type='with naoh',
                                                 solid_split=0.99,
-                                                res_moisture=0.9,  # TODO: this is now liquid split factor not res moisture
+                                                res_moisture=0.9,
+                                                # TODO: this is now liquid split factor not res moisture
                                                 t_out=t_filter,
                                                 adiabatic=False)
 
