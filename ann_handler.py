@@ -14,10 +14,12 @@ class AnnHandler:
             self.anns[ann_type] = dict()
             self.input_bounds[ann_type] = dict()
             for input_type in ['with naoh', 'no naoh']:
-                ann = maingopy.melonpy.FeedForwardNet()
-                ann.load_model(NN_DIR, f'{ANN_FILES[ann_type][input_type]}.xml', maingopy.melonpy.XML)
-                self.anns[ann_type][input_type] = ann
-                self.input_bounds[ann_type][input_type] = get_min_max(ANN_FILES[ann_type][input_type])
+                for range_type in ['high pressure', 'low pressure']:
+                    ann = maingopy.melonpy.FeedForwardNet()
+                    ann.load_model(NN_DIR, f'{ANN_FILES[ann_type][input_type]}.xml', maingopy.melonpy.XML)
+                    self.anns[ann_type][input_type] = ann
+                    self.input_bounds[ann_type][input_type] = get_min_max(ANN_FILES[ann_type][input_type])
+
 
     def get_stream_specs(self, inputs, input_type):
         t = inputs[IDX['T']]

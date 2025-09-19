@@ -7,7 +7,8 @@ class EvaluateProcess:
         self.unit_handler = UnitHandler(model)
 
     def equations(self, process_inputs, optimization_variables, p):
-        t_r101, p_r101, t_v101, p_v101, t_filter, p_filter, t_co2_tank, p_co2_tank, p_v102, p_v103, p_v104, t_he_hot_out = p[0:]
+        t_r101, p_r101, t_v101, p_v101, t_filter, p_filter, t_co2_tank, p_co2_tank, p_v102, p_v103, p_v104, t_he_hot_out = p[
+                                                                                                                           0:]
 
         t_c101, t_c101_isen, t_va101, t_m102, t_p102, t_he101_cold, t_c102, t_c102_isen, t_c103, t_c103_isen, \
         t_c104, t_c104_isen = optimization_variables[11:]
@@ -77,13 +78,14 @@ class EvaluateProcess:
                                                  input_type='no naoh',
                                                  split_factor=0.1,
                                                  adiabatic=False)
-        v4 = self.unit_handler.pump(name='C101',
-                                    inputs=[v3],
-                                    input_type='no naoh',
-                                    pump_eff=1,
-                                    t_out=t_c101,
-                                    p_out=p_r101,
-                                    adiabatic=True)
+        v4 = self.unit_handler.compressor(name='C101',
+                                          inputs=[v3],
+                                          input_type='no naoh',
+                                          isentropic_eff=0.9,
+                                          t_isen=t_c101_isen,
+                                          t_out=t_c101,
+                                          p_out=p_r101,
+                                          adiabatic=True)
         sl1 = self.unit_handler.mixer(name='M102',
                                       inputs=[solid_liquid, lr1_tear_stream],
                                       input_type='with naoh',
@@ -146,7 +148,7 @@ class EvaluateProcess:
         vv4, p8 = self.unit_handler.flash(name='V-104',
                                           inputs=[p7],
                                           input_type='with naoh',
-                                          t_out=68.4375+273.15,
+                                          t_out=68.4375 + 273.15,
                                           adiabatic=False)
         p9 = self.unit_handler.change_pt(name='VA-105',
                                          inputs=[p8],
@@ -158,7 +160,8 @@ class EvaluateProcess:
                                                 inputs=[p9],
                                                 input_type='with naoh',
                                                 solid_split=0.99,
-                                                res_moisture=0.9, # TODO: this is now liquid split factor not res moisture
+                                                res_moisture=0.9,
+                                                # TODO: this is now liquid split factor not res moisture
                                                 t_out=t_filter,
                                                 adiabatic=False)
         vc4 = self.unit_handler.compressor(name='C-104',
