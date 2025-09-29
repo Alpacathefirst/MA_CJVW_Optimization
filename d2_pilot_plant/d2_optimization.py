@@ -21,39 +21,42 @@ class Model(maingopy.MAiNGOmodel):
 
         tear_stream_vars = [
             # L-R1 tear stream
-            maingopy.OptimizationVariable(maingopy.Bounds(7, 10), maingopy.VT_CONTINUOUS, "CO2_LR1"),
-            maingopy.OptimizationVariable(maingopy.Bounds(300, 400), maingopy.VT_CONTINUOUS, "H2O_LR1"),
-            maingopy.OptimizationVariable(maingopy.Bounds(5, 12), maingopy.VT_CONTINUOUS, "NaOH_LR1"),
-            maingopy.OptimizationVariable(maingopy.Bounds(1e-9, 1), maingopy.VT_CONTINUOUS, "Magnesite_LR1"),
-            maingopy.OptimizationVariable(maingopy.Bounds(1e-9, 1), maingopy.VT_CONTINUOUS, "Forsterite_LR1"),
-            maingopy.OptimizationVariable(maingopy.Bounds(1e-9, 1), maingopy.VT_CONTINUOUS, "Fayalite_LR1"),
-            maingopy.OptimizationVariable(maingopy.Bounds(1e-9, 1), maingopy.VT_CONTINUOUS, "Amorphous_Silica_LR1"),
+            maingopy.OptimizationVariable(maingopy.Bounds(150, 250), maingopy.VT_CONTINUOUS, "CO2_LR1"),  # 0
+            maingopy.OptimizationVariable(maingopy.Bounds(8000, 15000), maingopy.VT_CONTINUOUS, "H2O_LR1"),  # 1
+            maingopy.OptimizationVariable(maingopy.Bounds(150, 300), maingopy.VT_CONTINUOUS, "NaOH_LR1"),  # 2
+            maingopy.OptimizationVariable(maingopy.Bounds(1, 20), maingopy.VT_CONTINUOUS, "Magnesite_LR1"),  # 3
+            maingopy.OptimizationVariable(maingopy.Bounds(1e-9, 10), maingopy.VT_CONTINUOUS, "Forsterite_LR1"),  # 4
+            maingopy.OptimizationVariable(maingopy.Bounds(1e-9, 10), maingopy.VT_CONTINUOUS, "Fayalite_LR1"),  # 5
+            maingopy.OptimizationVariable(maingopy.Bounds(1e-9, 10), maingopy.VT_CONTINUOUS, "Amorphous_Silica_LR1"),# 6
             # V-R4 tear stream
-            maingopy.OptimizationVariable(maingopy.Bounds(130, 170), maingopy.VT_CONTINUOUS, "CO2_VR1"),
-            maingopy.OptimizationVariable(maingopy.Bounds(10, 20), maingopy.VT_CONTINUOUS, "H2O_VR1"),
+            maingopy.OptimizationVariable(maingopy.Bounds(200, 700), maingopy.VT_CONTINUOUS, "CO2_VR1"),  # 7
+            maingopy.OptimizationVariable(maingopy.Bounds(10, 100), maingopy.VT_CONTINUOUS, "H2O_VR1"),  # 8
             # V-C2 tear_stream
-            maingopy.OptimizationVariable(maingopy.Bounds(1, 10), maingopy.VT_CONTINUOUS, "CO2_C2"),
-            maingopy.OptimizationVariable(maingopy.Bounds(1e-3, 4), maingopy.VT_CONTINUOUS, "H2O_C2")
+            maingopy.OptimizationVariable(maingopy.Bounds(100, 200), maingopy.VT_CONTINUOUS, "CO2_C2"),  # 9
+            maingopy.OptimizationVariable(maingopy.Bounds(1e-3, 100), maingopy.VT_CONTINUOUS, "H2O_C2")  # 10
         ]
-
-        # [335.979, 335.15, 440.15, 300.84999999999997, 300.45, 403.15, 649.15, 644.15, 613.15, 609.15, 686.15, 656.15]
 
         unit_variables = [
-            maingopy.OptimizationVariable(maingopy.Bounds(300, 400), maingopy.VT_CONTINUOUS, "T_C101"),
-            maingopy.OptimizationVariable(maingopy.Bounds(300, 400), maingopy.VT_CONTINUOUS, "T_C101_ISEN"),
-            maingopy.OptimizationVariable(maingopy.Bounds(400, 500), maingopy.VT_CONTINUOUS, "T_VA101"),
-            maingopy.OptimizationVariable(maingopy.Bounds(283, 320), maingopy.VT_CONTINUOUS, "T_M102"),
-            maingopy.OptimizationVariable(maingopy.Bounds(283, 320), maingopy.VT_CONTINUOUS, "T_P102"),
-            maingopy.OptimizationVariable(maingopy.Bounds(350, 500), maingopy.VT_CONTINUOUS, "T_HE101_COLD"),
-            maingopy.OptimizationVariable(maingopy.Bounds(500, 700), maingopy.VT_CONTINUOUS, "T_C102"),
-            maingopy.OptimizationVariable(maingopy.Bounds(500, 700), maingopy.VT_CONTINUOUS, "T_C102_ISEN"),
-            maingopy.OptimizationVariable(maingopy.Bounds(500, 700), maingopy.VT_CONTINUOUS, "T_C103"),
-            maingopy.OptimizationVariable(maingopy.Bounds(500, 700), maingopy.VT_CONTINUOUS, "T_C103_ISEN"),
-            maingopy.OptimizationVariable(maingopy.Bounds(500, 700), maingopy.VT_CONTINUOUS, "T_C104"),
-            maingopy.OptimizationVariable(maingopy.Bounds(500, 700), maingopy.VT_CONTINUOUS, "T_C104_ISEN"),
+            maingopy.OptimizationVariable(maingopy.Bounds(300, 400), maingopy.VT_CONTINUOUS, "T_C101"),  # 11
+            maingopy.OptimizationVariable(maingopy.Bounds(300, 400), maingopy.VT_CONTINUOUS, "T_C101_ISEN"),  # 12
+            maingopy.OptimizationVariable(maingopy.Bounds(400, 500), maingopy.VT_CONTINUOUS, "T_VA101"),  # 13
+            maingopy.OptimizationVariable(maingopy.Bounds(283, 320), maingopy.VT_CONTINUOUS, "T_M102"),  # 14
+            maingopy.OptimizationVariable(maingopy.Bounds(283, 320), maingopy.VT_CONTINUOUS, "T_P102"),  # 15
+            maingopy.OptimizationVariable(maingopy.Bounds(350, 500), maingopy.VT_CONTINUOUS, "T_HE101_COLD"),  # 16
+            maingopy.OptimizationVariable(maingopy.Bounds(500, 700), maingopy.VT_CONTINUOUS, "T_C102"),  # 17
+            maingopy.OptimizationVariable(maingopy.Bounds(500, 700), maingopy.VT_CONTINUOUS, "T_C102_ISEN"),  # 18
+            maingopy.OptimizationVariable(maingopy.Bounds(500, 700), maingopy.VT_CONTINUOUS, "T_C103"),  # 19
+            maingopy.OptimizationVariable(maingopy.Bounds(500, 700), maingopy.VT_CONTINUOUS, "T_C103_ISEN"),  # 20
+            maingopy.OptimizationVariable(maingopy.Bounds(500, 700), maingopy.VT_CONTINUOUS, "T_C104"),  # 21
+            maingopy.OptimizationVariable(maingopy.Bounds(500, 700), maingopy.VT_CONTINUOUS, "T_C104_ISEN"),  # 22
         ]
 
-        variables = tear_stream_vars + unit_variables
+        design_specs_variables = [
+            maingopy.OptimizationVariable(maingopy.Bounds(1000, 2000), maingopy.VT_CONTINUOUS, "H2O in"),  # 23
+            maingopy.OptimizationVariable(maingopy.Bounds(10, 50), maingopy.VT_CONTINUOUS, "NaOH in"),  # 24
+            maingopy.OptimizationVariable(maingopy.Bounds(1000, 1500), maingopy.VT_CONTINUOUS, "CO2 in")  # 25
+        ]
+        variables = tear_stream_vars + unit_variables + design_specs_variables
         return variables
 
     # We need to implement the evaluate function that computes the values of the objective and constraints from the
@@ -62,19 +65,22 @@ class Model(maingopy.MAiNGOmodel):
     # The only mapping we have between them is the position in the list.
     # The results of the evaluation (i.e., objective and constraint values) need to be return in an EvaluationContainer
     def evaluate(self, vars):
+        # olive input
+        m_olivine = 100  # kg
+
         # Define Constant inputs
         co2_in = [0] * len(NAMES)
         co2_in[IDX['T']] = 60 + 273.15
         co2_in[IDX['P']] = 95
-        co2_in[IDX['CO2']] = 50
+        co2_in[IDX['CO2']] = vars[25]
 
         sold_liquid = [0] * len(NAMES)
         sold_liquid[IDX['T']] = 30 + 273.15
         sold_liquid[IDX['P']] = 1
-        sold_liquid[IDX['H2O']] = 60
-        sold_liquid[IDX['NaOH']] = 1
-        sold_liquid[IDX['Forsterite']] = 15
-        sold_liquid[IDX['Fayalite']] = 10
+        sold_liquid[IDX['H2O']] = vars[23]
+        sold_liquid[IDX['NaOH']] = vars[24]
+        sold_liquid[IDX['Forsterite']] = m_olivine * 0.8 / MOLAR_MASS['Forsterite']
+        sold_liquid[IDX['Fayalite']] = m_olivine * 0.2 / MOLAR_MASS['Fayalite']
 
         proccess_inputs = [np.array(co2_in), np.array(sold_liquid)]
 
@@ -85,12 +91,12 @@ class Model(maingopy.MAiNGOmodel):
             95,  # p_v101
             25 + 273.15,  # t_filter
             1,  # p_filter
-            60+273.15,  # t_co2_tank
+            60 + 273.15,  # t_co2_tank
             95,  # p_co2_tank
             50,  # p V102
             25,  # p V103
             1,  # p V104
-            70+273.15  # T_HE1_hot_out
+            70 + 273.15  # T_HE1_hot_out
         ]
 
         # if not in evaluation mode, the process.equations will return all the equations that define the process
@@ -144,10 +150,20 @@ def run(run_opt):
     if run_opt:
         solution_vars = run_optimization()
     else:
-        stream_vars = [8.75, 381.9, 9, 0, 0, 0, 0, 147.7063, 17.49594, 4.585, 0.88597]
-        unit_vars = [62.829,
-                     62,
-                     167,
+        stream_vars = [220.8,  # lr1_co2
+                       12376.34,  # lr1_h2o
+                       224,  # lr1_naoh
+                       10.9,  # lr1_magnesite
+                       0.28,  # lr1_forsterite
+                       0.989,  # lr1_fayalite
+                       5.45,  # lr1_amorphous_silica
+                       535,  # vr1_co2
+                       63.88,  # vr1_h2o
+                       152,  # c2_co2
+                       26]  # c2_h2o
+        unit_vars = [62.829,  # t_c101
+                     62,  # t_c101_isen
+                     167,  #
                      27.7,
                      27.3,
                      130,
@@ -157,10 +173,14 @@ def run(run_opt):
                      336,  # t_c103_isen
                      413,  # t_c104
                      320]  # t_c104_isen   # 330 would be way closer, 392 is reaktoro solution
+
+        design_vars = [1461,  # h2o_in
+                       24.94,  # NaOH in
+                       1304.945]  # CO2 in
+
         for idx, value in enumerate(unit_vars):
             unit_vars[idx] = value + 273.15
-        print(unit_vars)
-        solution_vars = stream_vars + unit_vars
+        solution_vars = stream_vars + unit_vars + design_vars
 
     # evaluate model
     myModel.get_equations = False
@@ -175,17 +195,17 @@ def run(run_opt):
 
     # nicely display the output
     for name, stream in stream_outputs.items():
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"{name.upper()}")
-        print(f"{'-'*60}")
+        print(f"{'-' * 60}")
         for label, value in zip(NAMES, stream):
             v = float(value)
             if label == "T":
                 print(f"{label:<20} {to_celsius(v):>12.2f}")
             else:
                 print(f"{label:<20} {v:>12.6g}")
-    for unit, heatflow in myModel.unit_heat_duties.items():
-        print(unit, heatflow)
+    for unit in ['P-102', 'C-101', 'C-102', 'C-103', 'C-104', 'H-102', 'H-101', 'R-101']:
+        print(f'{unit}: power: {myModel.unit_power_duties[unit]/1000}kJ Q: {myModel.unit_heat_duties[unit]/1000}kJ')
 
 
 if __name__ == '__main__':

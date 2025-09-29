@@ -88,4 +88,43 @@ data_dict = {"Fayalite": {
                 "Tmax": 9999.0
             }
         }
-    }}
+    },
+    "CO2(g)": {
+          "Name": "CO2(g)",
+          "Formula": "CO2",
+          "Elements": "1:C 2:O",
+          "AggregateState": "Gas",
+          "StandardThermoModel": {
+            "HollandPowell": {
+              "Gf": -394350.0,
+              "Hf": -393510.0,
+              "Sr": 213.7,
+              "Vr": 0.0,
+              "a": 87.8,
+              "b": -0.002644,
+              "c": 706400.0,
+              "d": -998.9,
+              "Tmax": 9999.0
+            }
+          }
+        },
+    "H2O(g)": {
+          "Name": "H2O(g)",
+          "Formula": "H2O",
+          "Elements": "2:H 1:O",
+          "AggregateState": "Gas",
+          "StandardThermoModel": {
+            "HollandPowell": {
+              "Gf": -228560.0,
+              "Hf": -241810.0,
+              "Sr": 188.8,
+              "Vr": 0.0,
+              "a": 40.1,
+              "b": 0.008656,
+              "c": 487500.0,
+              "d": -251.2,
+              "Tmax": 9999.0
+            }
+          }
+        }
+}

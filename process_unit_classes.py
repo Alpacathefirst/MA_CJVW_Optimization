@@ -16,7 +16,8 @@ class BaseUnit(ABC):
         self.inequalities = []
         self.equalities = []
         self.h_in = None
-        self.Q = None
+        self.Q = 0
+        self.power = 0
 
     def run(self):
         combined_inputs = self.combine_inputs(self.inputs)
@@ -30,6 +31,7 @@ class BaseUnit(ABC):
         self.model.equalities += self.equalities
         self.model.inequalities += self.inequalities
         self.model.unit_heat_duties[self.name] = self.Q
+        self.model.unit_power_duties[self.name] = self.power
         return self.return_outputs()
 
     # --- Default/shared helpers ---
@@ -53,8 +55,6 @@ class BaseUnit(ABC):
         return combined_inputs[IDX['enthalpy_vle']] + combined_inputs[IDX['enthalpy_s']]
 
     def enthalpy_balance(self, adiabatic):
-        # TODO: basically what can happen, a constant temperature is given and the unit is adiabtic, a solution can't
-        #  be found
         h_out = 0
         for output in self.outputs:
             h_out = h_out + output[IDX['enthalpy_vle']] + output[IDX['enthalpy_s']]
@@ -92,11 +92,13 @@ class FlashUnit(BaseUnit):
 
 
 class ReactorUnit(BaseUnit):
-    def __init__(self, *args, frac_conversion, slr=None, molality=None, **kwargs):
+    def __init__(self, *args, frac_conversion, slr=None, molality=None, stoch_co2=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.n_reacted = 0
         self.frac_conversion = frac_conversion
         self.slr = slr
         self.molality = molality
+        self.stoch_co2 = stoch_co2
 
     def compute_content(self, combined_inputs):
         content = combined_inputs
@@ -104,25 +106,36 @@ class ReactorUnit(BaseUnit):
             content[IDX['P']] = self.p_out
         if self.t_out is not None:
             content[IDX['T']] = self.t_out
-        n_reacted = self.frac_conversion * combined_inputs[IDX['Forsterite']]
-        content[IDX['Forsterite']] -= n_reacted
-        content[IDX['CO2']] -= 2 * n_reacted
-        content[IDX['Magnesite']] += 2 * n_reacted
-        content[IDX['Amorphous_Silica']] += n_reacted
+        self.n_reacted = self.frac_conversion * combined_inputs[IDX['Forsterite']]
+        content[IDX['Forsterite']] -= self.n_reacted
+        content[IDX['CO2']] -= 2 * self.n_reacted
+        content[IDX['Magnesite']] += 2 * self.n_reacted
+        content[IDX['Amorphous_Silica']] += self.n_reacted
         return [content]
 
     def get_equalities(self, contents):
         content = contents[0]
         equalities = []
-        if self.slr is not None:
-            m_s = sum(content[IDX[s]] * MOLAR_MASS[s] for s in SOL_SPECIES)
-            m_w = content[IDX['H2O']] * MOLAR_MASS['H2O']
-            slr = m_s / maingopy.pos(m_w) - self.slr
-            equalities.append(slr)
-        if self.molality is not None:
-            m_w = content[IDX['H2O']] * MOLAR_MASS['H2O']
-            mol = content[IDX['NaOH']] / maingopy.pos(m_w) - self.molality
-            equalities.append(mol)
+        # if self.slr is not None:
+        #     # m_s = sum(content[IDX[s]] * MOLAR_MASS[s] for s in SOL_SPECIES)
+        #     m_s = sum(content[IDX[s]] * MOLAR_MASS[s] for s in ['Forsterite', 'Fayalite'])
+        #     m_w = content[IDX['H2O']] * MOLAR_MASS['H2O']
+        #     print('m_s', 'm_w', m_s, m_w)
+        #     slr = m_s / maingopy.pos(m_w) - self.slr
+        #     print("SLR", slr, m_s / m_w)
+        #     equalities.append(slr)
+        # if self.molality is not None:
+        #     m_w = content[IDX['H2O']] * MOLAR_MASS['H2O']
+        #     mol = content[IDX['NaOH']] / maingopy.pos(m_w) - self.molality
+        #     equalities.append(mol)
+        #     print('MOLALITY', mol)
+        # if self.stoch_co2 is not None:
+        #     # leftover CO2 (when stoch_co2 = 1, leftover co2=0,
+        #     total_co2_in = 0
+        #     for input in self.inputs:
+        #         total_co2_in += input[IDX['CO2']]
+        #     total_co2_in = (2 * self.stoch_co2) * self.n_reacted
+        #     equalities.append(total_co2_in)
         return equalities
 
     def ann_type(self):
@@ -133,18 +146,18 @@ class PumpUnit(BaseUnit):
     def __init__(self, *args, pump_eff, **kwargs):
         super().__init__(*args, **kwargs)
         self.pump_eff = pump_eff
-        self.power = 0
 
     def compute_content(self, combined_inputs):
+        delta_p = (self.p_out - combined_inputs[IDX['P']]) * 1e5  # in Pa
+        volume_flow = 0
+        for specie in ['H2O', 'Forsterite', 'Fayalite']:
+            volume_flow += combined_inputs[IDX[specie]] * MOLAR_MASS[specie] / DENSITY[specie]
+        self.power = delta_p * volume_flow / self.pump_eff
         content = combined_inputs
         if self.p_out is not None:
             content[IDX['P']] = self.p_out
         if self.t_out is not None:
             content[IDX['T']] = self.t_out
-        delta_p = self.p_out - combined_inputs[IDX['P']]
-        volume_flow = combined_inputs[IDX['H2O']] * MOLAR_MASS['H2O'] / 1000  # in m3 / time_unit
-        power = delta_p * volume_flow / self.pump_eff  # pump efficiency = 1
-        self.power = power
         return [content]
 
     def enthalpy_balance(self, adiabatic):
@@ -152,7 +165,6 @@ class PumpUnit(BaseUnit):
         if adiabatic:
             base = maingopy.neg(self.h_in) if self.model.get_equations else self.h_in
             eq = (h_out - self.h_in - self.power) / base
-            print(self.name, eq)
             self.equalities.append(eq)
         return h_out - self.h_in - self.power
 
@@ -264,7 +276,6 @@ class CompressorUnit(BaseUnit):
         content = [0] * len(combined_inputs)
         iso_content = [0] * len(combined_inputs)
 
-        self.t_input = combined_inputs[IDX['T']]
         content[IDX['T']] = self.t_out
         content[IDX['P']] = self.p_out
         iso_content[IDX['T']] = self.t_isen
@@ -298,6 +309,8 @@ class CompressorUnit(BaseUnit):
 
         # efficiency: eta = (h2s - h1) / (h2 - h1)  =>  eta*(h2 - h1) - (h2s - h1) = 0
         h_eq = (self.isentropic_eff * (h_out - self.h_in) - (h_out_isentropic - self.h_in)) / base_h
+        self.power = h_out - self.h_in
+        self.Q = h_out - self.h_in - self.power
         return [s_eq, h_eq]
 
     def get_absolute_entropy(self, stream):
@@ -315,7 +328,6 @@ class CompressorUnit(BaseUnit):
 
         s_abs = stream[IDX['entropy_vle']] - n_total * s_cor_mix
 
-        print('MOLAR ENTROPY', stream[IDX['T']], stream[IDX['entropy_vle']] / n_total, n_total, s_cor_mix, s_abs)
         return s_abs
 
     def get_absolute_entropy_input(self):
@@ -325,8 +337,7 @@ class CompressorUnit(BaseUnit):
         return s_abs
 
     def enthalpy_balance(self, adiabatic):
-        h_out = self.outputs[0][IDX['enthalpy_vle']] + self.outputs[0][IDX['enthalpy_s']]
-        return h_out - self.h_in  # positive = power input
+        return self.Q
 
     def return_outputs(self):
         # don't return the isentropic output

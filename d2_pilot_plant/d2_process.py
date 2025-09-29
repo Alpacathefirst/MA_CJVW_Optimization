@@ -7,11 +7,11 @@ class EvaluateProcess:
         self.unit_handler = UnitHandler(model)
 
     def equations(self, process_inputs, optimization_variables, p):
-        t_r101, p_r101, t_v101, p_v101, t_filter, p_filter, t_co2_tank, p_co2_tank, p_v102, p_v103, p_v104, t_he_hot_out = p[
-                                                                                                                           0:]
+        t_r101, p_r101, t_v101, p_v101, t_filter, p_filter, t_co2_tank, p_co2_tank, p_v102, \
+        p_v103, p_v104, t_he_hot_out = p[0:]
 
         t_c101, t_c101_isen, t_va101, t_m102, t_p102, t_he101_cold, t_c102, t_c102_isen, t_c103, t_c103_isen, \
-        t_c104, t_c104_isen = optimization_variables[11:]
+        t_c104, t_c104_isen = optimization_variables[11:23]
 
         lr1_pre_tear_stream = [0] * len(NAMES)
         lr1_co2, lr1_h2o, lr1_naoh, lr1_magnesite, lr1_forsterite, lr1_fayalite, lr1_sio2 = optimization_variables[0:7]
@@ -52,33 +52,33 @@ class EvaluateProcess:
                                                 input_type='with naoh')
 
         # define all units and how they are connected
-        vr2 = self.unit_handler.change_pt(name='VA101',
+        vr2 = self.unit_handler.change_pt(name='VA-101',
                                           inputs=[vr1_tear_stream],
                                           input_type='no naoh',
                                           p_out=p_co2_tank,
                                           t_out=t_va101,
                                           adiabatic=True)
-        vr3 = self.unit_handler.change_pt(name='h101',
+        vr3 = self.unit_handler.change_pt(name='H-101',
                                           inputs=[vr2, vc2_pre_tear_stream],
                                           input_type='no naoh',
                                           t_out=t_co2_tank,
                                           adiabatic=False)
-        vr4, lpurge = self.unit_handler.flash(name='V101',
+        vr4, lpurge = self.unit_handler.flash(name='V-101',
                                               inputs=[vr3],
                                               input_type='no naoh',
                                               t_out=t_co2_tank,
                                               adiabatic=False)
-        v2 = self.unit_handler.mixer(name='M101',
+        v2 = self.unit_handler.mixer(name='M-101',
                                      inputs=[v1, vr4],
                                      input_type='no naoh',
                                      t_out=t_co2_tank,
                                      adiabatic=False)
-        v3, gpurge1 = self.unit_handler.splitter(name='S101',
+        v3, gpurge1 = self.unit_handler.splitter(name='S-101',
                                                  inputs=[v2],
                                                  input_type='no naoh',
                                                  split_factor=0.1,
                                                  adiabatic=False)
-        v4 = self.unit_handler.compressor(name='C101',
+        v4 = self.unit_handler.compressor(name='C-101',
                                           inputs=[v3],
                                           input_type='no naoh',
                                           isentropic_eff=0.9,
@@ -86,40 +86,42 @@ class EvaluateProcess:
                                           t_out=t_c101,
                                           p_out=p_r101,
                                           adiabatic=True)
-        sl1 = self.unit_handler.mixer(name='M102',
+        sl1 = self.unit_handler.mixer(name='M-102',
                                       inputs=[solid_liquid, lr1_tear_stream],
                                       input_type='with naoh',
                                       t_out=t_m102,
                                       adiabatic=True)
-        sl2 = self.unit_handler.pump(name='P102',
+        sl2 = self.unit_handler.pump(name='P-102',
                                      inputs=[sl1],
                                      input_type='with naoh',
                                      pump_eff=1,
                                      p_out=p_r101,
                                      t_out=t_p102,
                                      adiabatic=True)
-        sl3 = self.unit_handler.change_pt(name='HE101_cold',
+        sl3 = self.unit_handler.change_pt(name='HE-101_cold',
                                           inputs=[sl2],
                                           input_type='with naoh',
                                           t_out=t_he101_cold,
                                           adiabatic=False)
-        sl4 = self.unit_handler.change_pt(name='H101',
+        sl4 = self.unit_handler.change_pt(name='H-102',
                                           inputs=[sl3],
                                           input_type='with naoh',
                                           t_out=t_r101,
                                           adiabatic=False)
-        pr = self.unit_handler.reactor(name='R101',
+        pr = self.unit_handler.reactor(name='R-101',
                                        inputs=[sl4, v4],
                                        input_type='with naoh',
                                        frac_conversion=0.95,
+                                       slr=0.4,
+                                       molality=1,
                                        t_out=t_r101,
                                        adiabatic=False)
-        vr1, p1 = self.unit_handler.flash(name='VR',
+        vr1, p1 = self.unit_handler.flash(name='V-R',
                                           inputs=[pr],
                                           input_type='with naoh',
                                           t_out=t_r101,
                                           adiabatic=False)
-        p2 = self.unit_handler.change_pt(name='HE101_hot',
+        p2 = self.unit_handler.change_pt(name='HE-101_hot',
                                          inputs=[p1],
                                          input_type='with naoh',
                                          t_out=t_he_hot_out,
@@ -156,7 +158,7 @@ class EvaluateProcess:
                                          t_out=t_filter,
                                          p_out=p_filter,
                                          adiabatic=False)
-        lr1, product = self.unit_handler.filter(name='F101',
+        lr1, product = self.unit_handler.filter(name='F-101',
                                                 inputs=[p9],
                                                 input_type='with naoh',
                                                 solid_split=0.99,
@@ -188,9 +190,27 @@ class EvaluateProcess:
 
         if self.model.get_equations:
             # equality contraint for HE101
-            q_he101_hot = self.model.unit_heat_duties['HE101_hot']
-            q_he101_cold = self.model.unit_heat_duties['HE101_cold']
+            q_he101_hot = self.model.unit_heat_duties['HE-101_hot']
+            q_he101_cold = self.model.unit_heat_duties['HE-101_cold']
             self.model.equalities.append((q_he101_hot + q_he101_cold) / maingopy.neg(q_he101_hot))
+
+            # Equality constraint CO2
+            co2_r = vr1[IDX['CO2']]
+            co2_sto = sl4[IDX['Forsterite']] * 0.95 * 2
+            co2_sto_spec = (co2_r + co2_sto) / maingopy.pos(co2_sto) - 1.5
+            self.model.equalities.append(co2_sto_spec)
+
+            # Equality constraint SLR
+            # m_s = sum(content[IDX[s]] * MOLAR_MASS[s] for s in SOL_SPECIES)
+            m_s = sum(sl4[IDX[s]] * MOLAR_MASS[s] for s in ['Forsterite', 'Fayalite'])
+            m_w = sl4[IDX['H2O']] * MOLAR_MASS['H2O']
+            slr = m_s / maingopy.pos(m_w) - 0.4
+            self.model.equalities.append(slr)
+
+            # Equality constrain Molality
+            m_w = sl4[IDX['H2O']] * MOLAR_MASS['H2O']
+            mol = sl4[IDX['NaOH']] / maingopy.pos(m_w) - 1
+            self.model.equalities.append(mol)
 
             # define the objective of the optimization
             tear_streams_errors = []

@@ -19,9 +19,10 @@ class UnitHandler:
         return FlashUnit(model=self.model, ann_handler=self.ann, name=name, inputs=inputs, input_type=input_type,
                          t_out=t_out, p_out=p_out, adiabatic=adiabatic).run()
 
-    def reactor(self, name, inputs, input_type, frac_conversion, t_out=None, p_out=None, adiabatic=False):
+    def reactor(self, name, inputs, input_type, frac_conversion, slr=None, molality=None, stoch_co2=None, t_out=None, p_out=None, adiabatic=False):
         return ReactorUnit(model=self.model, ann_handler=self.ann, name=name, inputs=inputs, input_type=input_type,
-                           frac_conversion=frac_conversion, t_out=t_out, p_out=p_out, adiabatic=adiabatic).run()
+                           frac_conversion=frac_conversion, slr=slr, molality=molality, stoch_co2=stoch_co2,
+                           t_out=t_out, p_out=p_out, adiabatic=adiabatic).run()
 
     def pump(self, name, inputs, input_type, pump_eff, t_out=None, p_out=None, adiabatic=True):
         return PumpUnit(model=self.model, ann_handler=self.ann, name=name, inputs=inputs, input_type=input_type,

@@ -8,26 +8,53 @@ VLE_FILES = {'with naoh': r'DATASET_250911_refined_1_1', 'no naoh': r'DATASET_VA
 HS_FILES = {'with naoh': r'DATASET_S_H_250911_refined_1_1', 'no naoh': r'DATASET_VAPOR_250912_refined_3_1'}
 ANN_FILES = {'vle': VLE_FILES, 'hs': HS_FILES}
 
+gas_species = ['CO2(g)', 'H2O(g)']
+
+g_hf, g_a, g_b, g_c, g_d, g_sr, g_vr = [], [], [], [], [], [], []
+
+for sp in gas_species:
+    rec = data_dict.get(sp, {}).get('StandardThermoModel', {}).get('HollandPowell', None)
+    if rec is None:
+        # fallback if keys are stored without (g), e.g. "CO2" / "H2O"
+        sp_base = sp.replace('(g)', '').strip()
+        rec = data_dict[sp_base]['StandardThermoModel']['HollandPowell']
+
+    g_hf.append([rec['Hf']])  # J/mol
+    g_a.append([rec['a']])  # Maier–Kelley A
+    g_b.append([rec['b']])  # Maier–Kelley B
+    g_c.append([rec['c']])  # Maier–Kelley C
+    g_d.append([rec['d']])  # Maier–Kelley D
+    g_sr.append([rec['Sr']])  # J/(mol·K) at 298.15 K, 1 bar
+    g_vr.append([rec['Vr']])  # m^3/mol at 298.15 K, 1 bar
+
+Hf_GASES = np.array(g_hf)
+A_GASES = np.array(g_a)
+B_GASES = np.array(g_b)
+C_GASES = np.array(g_c)
+D_GASES = np.array(g_d)
+SR_GASES = np.array(g_sr)
+V_REF_GASES = np.array(g_vr)
+
 solid_species = ['Magnesite', 'Forsterite', 'Fayalite', 'SiO2(a)']
 
-hf = []
-a = []
-b = []
-c = []
-d = []
+s_hf = []
+s_a = []
+s_b = []
+s_c = []
+s_d = []
 
 for specie in solid_species:
-    hf.append([data_dict[specie]['StandardThermoModel']['HollandPowell']['Hf']])
-    a.append([data_dict[specie]['StandardThermoModel']['HollandPowell']['a']])
-    b.append([data_dict[specie]['StandardThermoModel']['HollandPowell']['b']])
-    c.append([data_dict[specie]['StandardThermoModel']['HollandPowell']['c']])
-    d.append([data_dict[specie]['StandardThermoModel']['HollandPowell']['d']])
+    s_hf.append([data_dict[specie]['StandardThermoModel']['HollandPowell']['Hf']])
+    s_a.append([data_dict[specie]['StandardThermoModel']['HollandPowell']['a']])
+    s_b.append([data_dict[specie]['StandardThermoModel']['HollandPowell']['b']])
+    s_c.append([data_dict[specie]['StandardThermoModel']['HollandPowell']['c']])
+    s_d.append([data_dict[specie]['StandardThermoModel']['HollandPowell']['d']])
 
-Hf = np.array(hf)
-A = np.array(a)
-B = np.array(b)
-C = np.array(c)
-D = np.array(d)
+Hf_SOLID = np.array(s_hf)
+A_SOLID = np.array(s_a)
+B_SOLID = np.array(s_b)
+C_SOLID = np.array(s_c)
+D_SOLID = np.array(s_d)
 
 # Leave T and P at index 0 and 1, otherwise it will break the code
 NAMES = [
@@ -53,8 +80,18 @@ MOLAR_MASS = {
     "N2": 0.0280134,
     "H2O": 0.01801528,
     "NaOH": 0.039997,
-    "Magnesite": 0.084313,         # MgCO3
-    "Forsterite": 0.140693,        # Mg2SiO4
-    "Fayalite": 0.203774,          # Fe2SiO4
+    "Magnesite": 0.084313,  # MgCO3
+    "Forsterite": 0.140693,  # Mg2SiO4
+    "Fayalite": 0.203774,  # Fe2SiO4
     "Amorphous_Silica": 0.0600843  # SiO2
 }
+
+# density in kg/m3
+DENSITY = {
+    "H2O": 1000,
+    "Forsterite": 3217,
+    "Fayalite": 4392
+}
+
+# Ideal Gas constant
+R = 8.314  # J / mol / K

@@ -20,7 +20,6 @@ class AnnHandler:
                     self.anns[ann_type][input_type] = ann
                     self.input_bounds[ann_type][input_type] = get_min_max(ANN_FILES[ann_type][input_type])
 
-
     def get_stream_specs(self, inputs, input_type):
         t = inputs[IDX['T']]
         p = inputs[IDX['P']]
@@ -159,12 +158,26 @@ class AnnHandler:
 
         return outputs
 
+    def handle_hs0_gases(self, t, p, gases):
+        t_ref = 298.15
+        p_ref = 1  # can get away with units bar
+        CpdT = A_GASES * (t - t_ref) + 0.5 * B_GASES * (t ** 2 - t_ref ** 2) - C_GASES * (
+                    1.0 / t - 1.0 / t_ref) + 2.0 * D_GASES * (t ** 0.5 - t_ref ** 0.5)
+        Vdp = R * t * math.log(p / p_ref)
+        CpdlnT = A_GASES * math.log(t / t_ref) + B_GASES * (t - t_ref) - 0.5 * C_GASES * (
+                    1 / t ** 2 - 1 / t_ref ** 2) - 2.0 * D_GASES * (1 / t ** 0.5 - 1 / t_ref ** 0.5)
+        h = CpdT + Vdp
+        enthalpy_gases = np.sum(np.dot(gases, h + Hf_GASES))
+        entropy_gases = np.sum(np.dot(gases, SR_GASES + CpdlnT))
+        return enthalpy_gases, entropy_gases
+
     def enthalpy_solids(self, t, solids):
+        # A, B, C, D, Hf are defined in c1_constants
         t_ref = 298.15
         t = maingopy.pos(t) if self.model.get_equations else t
-        h = A * (t - t_ref) + 0.5 * B * (t ** 2 - t_ref ** 2) + C * (1 / t_ref - 1 / t) + 2 * D * (
+        h = A_SOLID * (t - t_ref) + 0.5 * B_SOLID * (t ** 2 - t_ref ** 2) + C_SOLID * (1 / t_ref - 1 / t) + 2 * D_SOLID * (
                 t ** 0.5 - t_ref ** 0.5)
-        enthalpy_s = np.sum(np.dot(solids, h + Hf))
+        enthalpy_s = np.sum(np.dot(solids, h + Hf_SOLID))
         return enthalpy_s
 
     def evaluate(self, ann_type, inputs, input_type):
