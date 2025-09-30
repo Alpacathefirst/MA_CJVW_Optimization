@@ -7,12 +7,7 @@ class EvaluateProcess:
         self.unit_handler = UnitHandler(model)
 
     def equations(self, process_inputs, optimization_variables, p):
-        # solution_vars = [60 + 273.15, 63 + 273.15, 166 + 273, 62 + 273, 63 + 273, 160 + 273, 70 + 273, 1, 8.77, 417, 9,
-        #                  60 + 273.15, 95, 102, 0.53]
-        #
-        # t_m101_const, t_c101_const, t_va101, t_m102_const, t_p102, t_he101_cold = solution_vars[:6]
-
-        t_r101, p_r101, t_v101, p_v101, t_filter, p_filter, t_co2_tank, p_co2_tank = \
+        t_r101, p_r101, t_v102, p_v102, t_filter, p_filter, t_co2_tank, p_co2_tank = \
             p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]
 
         lr1_pre_tear_stream = [0] * len(NAMES)
@@ -40,24 +35,6 @@ class EvaluateProcess:
         t_m102 = optimization_variables[12]
         t_p102 = optimization_variables[13]
         t_he101_cold = optimization_variables[14]
-        #
-        # t_r101, p_r101, t_v101, p_v101, t_filter, p_filter, t_co2_tank, p_co2_tank = \
-        #     p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]
-        #
-        # lr1_pre_tear_stream = [0] * len(NAMES)
-        # lr1_co2, lr1_h2o, lr1_naoh = optimization_variables[6], optimization_variables[7], optimization_variables[8]
-        # lr1_pre_tear_stream[IDX['T']] = t_filter
-        # lr1_pre_tear_stream[IDX['P']] = p_filter
-        # lr1_pre_tear_stream[IDX['CO2']] = lr1_co2
-        # lr1_pre_tear_stream[IDX['H2O']] = lr1_h2o
-        # lr1_pre_tear_stream[IDX['NaOH']] = lr1_naoh
-        #
-        # vr4_pre_tear_stream = [0] * len(NAMES)
-        # vr4_co2, vr4_h2o = optimization_variables[9], optimization_variables[10]
-        # vr4_pre_tear_stream[IDX['T']] = t_co2_tank
-        # vr4_pre_tear_stream[IDX['P']] = p_co2_tank
-        # vr4_pre_tear_stream[IDX['CO2']] = vr4_co2
-        # vr4_pre_tear_stream[IDX['H2O']] = vr4_h2o
 
         # make sure input streams are in equilibrium
         lr1_tear_stream = self.unit_handler.stream(inputs=lr1_pre_tear_stream,
@@ -78,7 +55,7 @@ class EvaluateProcess:
         v3, gpurge1 = self.unit_handler.splitter(name='S101',
                                                  inputs=[v2],
                                                  input_type='no naoh',
-                                                 split_factor=0.1,
+                                                 split_factor=0.05,
                                                  adiabatic=False)
         v4 = self.unit_handler.compressor(name='C101',
                                           inputs=[v3],
@@ -141,18 +118,18 @@ class EvaluateProcess:
         p2 = self.unit_handler.change_pt(name='HE101_hot',
                                          inputs=[p1],
                                          input_type='with naoh',
-                                         t_out=sl2[IDX['T']] + 10,
+                                         t_out=70+273.15,
                                          adiabatic=False)
         p3 = self.unit_handler.change_pt(name='VA101',
                                          inputs=[p2],
                                          input_type='with naoh',
-                                         t_out=t_v101,
-                                         p_out=p_v101,
+                                         t_out=t_v102,
+                                         p_out=p_v102,
                                          adiabatic=False)
-        gpurge, p4 = self.unit_handler.flash(name='V101',
+        gpurge, p4 = self.unit_handler.flash(name='V102',
                                              inputs=[p3],
                                              input_type='with naoh',
-                                             t_out=t_v101,
+                                             t_out=t_v102,
                                              adiabatic=False)
         lr1, product = self.unit_handler.filter(name='F101',
                                                 inputs=[p4],
@@ -168,6 +145,24 @@ class EvaluateProcess:
             q_he101_hot = self.model.unit_heat_duties['HE101_hot']
             q_he101_cold = self.model.unit_heat_duties['HE101_cold']
             self.model.equalities.append((q_he101_hot + q_he101_cold) / maingopy.neg(q_he101_hot))
+
+            # Equality constraint CO2
+            co2_r = vr1[IDX['CO2']]
+            co2_sto = sl4[IDX['Forsterite']] * 0.95 * 2
+            co2_sto_spec = (co2_r + co2_sto) / maingopy.pos(co2_sto) - 1.39
+            self.model.equalities.append(co2_sto_spec)
+
+            # Equality constraint SLR
+            # m_s = sum(content[IDX[s]] * MOLAR_MASS[s] for s in SOL_SPECIES)
+            m_s = sum(sl4[IDX[s]] * MOLAR_MASS[s] for s in ['Forsterite', 'Fayalite'])
+            m_w = sl4[IDX['H2O']] * MOLAR_MASS['H2O']
+            slr = m_s / maingopy.pos(m_w) - 0.386
+            self.model.equalities.append(slr)
+
+            # Equality constrain Molality
+            m_w = sl4[IDX['H2O']] * MOLAR_MASS['H2O']
+            mol = sl4[IDX['NaOH']] / maingopy.pos(m_w) - 0.977
+            self.model.equalities.append(mol)
 
             # define the objective of the optimization
             tear_streams_errors = []

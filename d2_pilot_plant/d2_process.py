@@ -104,7 +104,7 @@ class EvaluateProcess:
                                           t_out=t_he101_cold,
                                           adiabatic=False)
         sl4 = self.unit_handler.change_pt(name='H-102',
-                                          inputs=[sl3],
+                                          inputs=[sl3 ],
                                           input_type='with naoh',
                                           t_out=t_r101,
                                           adiabatic=False)
