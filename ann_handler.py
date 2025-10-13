@@ -14,11 +14,10 @@ class AnnHandler:
             self.anns[ann_type] = dict()
             self.input_bounds[ann_type] = dict()
             for input_type in ['with naoh', 'no naoh']:
-                for range_type in ['high pressure', 'low pressure']:
-                    ann = maingopy.melonpy.FeedForwardNet()
-                    ann.load_model(NN_DIR, f'{ANN_FILES[ann_type][input_type]}.xml', maingopy.melonpy.XML)
-                    self.anns[ann_type][input_type] = ann
-                    self.input_bounds[ann_type][input_type] = get_min_max(ANN_FILES[ann_type][input_type])
+                ann = maingopy.melonpy.FeedForwardNet()
+                ann.load_model(NN_DIR, f'{ANN_FILES[ann_type][input_type]}.xml', maingopy.melonpy.XML)
+                self.anns[ann_type][input_type] = ann
+                self.input_bounds[ann_type][input_type] = get_min_max(ANN_FILES[ann_type][input_type])
 
     def get_stream_specs(self, inputs, input_type):
         t = inputs[IDX['T']]
@@ -29,9 +28,14 @@ class AnnHandler:
         n_total = co2 + h2o + naoh
 
         if self.model.get_equations:
-            co2_frac = co2 / maingopy.pos((co2 + h2o))
+            # co2_frac = -co2 / maingopy.neg(-(co2 + h2o + NON_ZERO_EPSILON))
+            # co2_frac = co2 / maingopy.pos((co2 + h2o + NON_ZERO_EPSILON))
+            den = maingopy.lb_func(co2 + h2o, NON_ZERO_EPSILON)
+            co2_frac = co2 / den
+
+            # self.model.inequalities.append(-co2_frac)
             if input_type == 'with naoh':
-                molality = naoh / maingopy.pos((h2o * MOLAR_MASS['H2O']))
+                molality = naoh / maingopy.pos((h2o * MOLAR_MASS['H2O'] + NON_ZERO_EPSILON))
             else:
                 molality = 0
 
@@ -86,22 +90,33 @@ class AnnHandler:
         min_in = self.input_bounds[ann_type][input_type]['min_in']
         max_in = self.input_bounds[ann_type][input_type]['max_in']
 
-        t_ineq_min = min_in[0] - t
-        t_ineq_max = t - max_in[0]
-        p_ineq_min = min_in[1] - p
-        p_ineq_max = p - max_in[1]
-        co2_ineq = -co2
-        h2o_ineq = -h2o
-        naoh_ineq = -naoh
-        co2_frac_ineq_min = min_in[2] - co2_frac
-        co2_frac_ineq_max = co2_frac - max_in[2]
+        # t_ineq_min = min_in[0] - t
+        # t_ineq_max = t - max_in[0]
+        # p_ineq_min = min_in[1] - p
+        # p_ineq_max = p - max_in[1]
+        # co2_ineq = -co2
+        # h2o_ineq = -h2o
+        # naoh_ineq = -naoh
+        # co2_frac_ineq_min = min_in[2] - co2_frac
+        # co2_frac_ineq_max = co2_frac - max_in[2]
 
-        ineqs = [t_ineq_min, t_ineq_max, p_ineq_min, p_ineq_max, co2_ineq, h2o_ineq, naoh_ineq]
-        # ineqs = [t_ineq_min, t_ineq_max, p_ineq_min, p_ineq_max, co2_frac_ineq_min, co2_frac_ineq_max, co2_ineq, h2o_ineq, naoh_ineq]
+        t_ineq_min = 273.15 - t
+        t_ineq_max = t - 737.15
+        p_ineq_min = 1 - p
+        p_ineq_max = p - 200
+        co2_ineq = NON_ZERO_EPSILON-co2
+        h2o_ineq = NON_ZERO_EPSILON-h2o
+        naoh_ineq = NON_ZERO_EPSILON-naoh
+        co2_frac_ineq_min = NON_ZERO_EPSILON - co2_frac
+        co2_frac_ineq_max = co2_frac - 1
 
+
+        # ineqs = [t_ineq_min, t_ineq_max, p_ineq_min, p_ineq_max, co2_ineq, h2o_ineq, naoh_ineq]
+        ineqs = [t_ineq_min, t_ineq_max, p_ineq_min, p_ineq_max, co2_frac_ineq_min, co2_frac_ineq_max, co2_ineq, h2o_ineq, naoh_ineq]
+        # ineqs = []
         if input_type == 'with naoh':
-            molality_ineq_min = min_in[3] - molality
-            molality_ineq_max = molality - max_in[3]
+            molality_ineq_min = 0 - molality
+            molality_ineq_max = molality - 5
             ineqs += [molality_ineq_min, molality_ineq_max]
             ann_inputs = [t, p, co2_frac, molality]
         elif input_type == 'no naoh':
@@ -114,7 +129,7 @@ class AnnHandler:
         return ineqs, ann_inputs_scaled
 
     def handle_vle_output(self, inputs, input_type, ann_outputs, t, p, co2, h2o, naoh, n_total):
-        # ann_outputs: ['Y_H2O', 'X_CO2', 'vapor fraction', 'enthalpy']
+        # ann_outputs: ['Y_H2O', 'X_CO2', 'vapor fraction']
         n_vap = n_total * ann_outputs[2]
         n_liq = n_total - n_vap
 

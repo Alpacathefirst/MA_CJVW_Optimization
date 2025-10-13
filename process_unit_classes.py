@@ -300,10 +300,10 @@ class CompressorUnit(BaseUnit):
 
         h_out = self.outputs[0][IDX['enthalpy_vle']] + self.outputs[0][IDX['enthalpy_s']]
 
-        base_s = maingopy.pos((s_in ** 2 + s_out_isentropic ** 2)**0.5) if self.model.get_equations else ((s_in ** 2 + s_out_isentropic ** 2)**0.5)
+        base_s = maingopy.pos((s_in ** 2 + s_out_isentropic ** 2)**0.5 + NON_ZERO_EPSILON) if self.model.get_equations else ((s_in ** 2 + s_out_isentropic ** 2)**0.5)
         base_h = maingopy.neg(self.h_in)
 
-        s_eq = (s_out_isentropic - s_in) / (base_s + 50)
+        s_eq = (s_out_isentropic - s_in) / (base_s + 50)  # TODO: this +50 is used to make sure at s values close to zero the isentropic calculation doesnt break down
         # print(self.name, s_out_isentropic, s_in, base_s)
         # print(self.name, s_eq)
 
@@ -320,7 +320,7 @@ class CompressorUnit(BaseUnit):
         def s_correction(sp: str):
             # s_cor = x_specie * (Hf_specie - Gf_specie)/T + S298 - S298 * Tref_specie/T
             d = THERMOCHEMICAL_DATA[sp]
-            return (stream[IDX[sp]] / maingopy.pos(n_total)) * ((d["Hf298"] - d["Gf298"]) / stream[IDX['T']] + d["S298"] * (1.0 - d["Tref"] / stream[IDX['T']]))
+            return (stream[IDX[sp]] / maingopy.pos(n_total + NON_ZERO_EPSILON)) * ((d["Hf298"] - d["Gf298"]) / stream[IDX['T']] + d["S298"] * (1.0 - d["Tref"] / stream[IDX['T']]))
 
         s_cor_mix = 0
         for sp in ['CO2', 'H2O']:

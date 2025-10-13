@@ -68,7 +68,7 @@ VLE_SPECIES = ["CO2", "H2O", "NaOH"]
 SOL_SPECIES = ["Magnesite", "Forsterite", "Fayalite", "Amorphous_Silica"]
 
 EPSILON = 1e-16
-
+NON_ZERO_EPSILON = 1e-10
 # Thermochemical data at 298.15 K (J/mol, J/mol/K)
 THERMOCHEMICAL_DATA = {
     "CO2": {"Tref": 298.15, "S298": 213.7, "Hf298": -393_510.0, "Gf298": -394_350.0},

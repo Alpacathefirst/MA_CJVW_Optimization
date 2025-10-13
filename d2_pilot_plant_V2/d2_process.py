@@ -14,6 +14,8 @@ class EvaluateProcess:
         t_c104, t_c104_isen = optimization_variables[11:23]
 
         liquid_split = optimization_variables[26]
+        # p_v102 = optimization_variables[27]
+        # p_v103 = optimization_variables[28]
 
         lr1_pre_tear_stream = [0] * len(NAMES)
         lr1_co2, lr1_h2o, lr1_naoh, lr1_magnesite, lr1_forsterite, lr1_fayalite, lr1_sio2 = optimization_variables[0:7]
@@ -96,7 +98,7 @@ class EvaluateProcess:
         sl2 = self.unit_handler.pump(name='P-102',
                                      inputs=[sl1],
                                      input_type='with naoh',
-                                     pump_eff=1,
+                                     pump_eff=0.35,
                                      p_out=p_r101,
                                      t_out=t_p102,
                                      adiabatic=True)
@@ -198,44 +200,45 @@ class EvaluateProcess:
             # Equality constraint CO2
             co2_r = vr1[IDX['CO2']]
             co2_sto = sl4[IDX['Forsterite']] * 0.95 * 2
-            co2_sto_spec = (co2_r + co2_sto) / maingopy.pos(co2_sto) - 1.5
+            co2_sto_spec = (co2_r + co2_sto) / maingopy.pos(co2_sto + NON_ZERO_EPSILON) - 1.5
             self.model.equalities.append(co2_sto_spec)
 
             # Equality constraint SLR
             # m_s = sum(content[IDX[s]] * MOLAR_MASS[s] for s in SOL_SPECIES)
             m_s = sum(sl4[IDX[s]] * MOLAR_MASS[s] for s in ['Forsterite', 'Fayalite'])
             m_w = sl4[IDX['H2O']] * MOLAR_MASS['H2O']
-            slr = m_s / maingopy.pos(m_w) - 0.4
+            slr = m_s / maingopy.pos(m_w + NON_ZERO_EPSILON) - 0.4
             self.model.equalities.append(slr)
 
             # Equality constrain Molality
             m_w = sl4[IDX['H2O']] * MOLAR_MASS['H2O']
-            mol = sl4[IDX['NaOH']] / maingopy.pos(m_w) - 1
+            mol = sl4[IDX['NaOH']] / maingopy.pos(m_w + NON_ZERO_EPSILON) - 1
             self.model.equalities.append(mol)
 
             # Residual Moisture
             m_s_p = sum(product[IDX[s]] * MOLAR_MASS[s] for s in SOL_SPECIES)
             m_l_p = sum(product[IDX[s]] * MOLAR_MASS[s] for s in VLE_SPECIES)
-            res_moisture = m_l_p / m_s_p - 0.2
+            res_moisture = m_l_p / maingopy.pos(m_s_p + NON_ZERO_EPSILON) - 0.2
             self.model.equalities.append(res_moisture)
 
             # define the objective of the optimization
             tear_streams_errors = []
             for specie in VLE_SPECIES + SOL_SPECIES:
                 molar_balance = (lr1_tear_stream[IDX[specie]] - lr1[IDX[specie]]) \
-                                / maingopy.pos(lr1_tear_stream[IDX[specie]])
+                                / maingopy.pos(lr1_tear_stream[IDX[specie]] + NON_ZERO_EPSILON)
                 tear_streams_errors.append(molar_balance ** 2)
             for specie in ['CO2', 'H2O']:
                 molar_balance = (vr1_tear_stream[IDX[specie]] - vr1[IDX[specie]]) \
-                                / maingopy.pos(vr1_tear_stream[IDX[specie]])
+                                / maingopy.pos(vr1_tear_stream[IDX[specie]] + NON_ZERO_EPSILON)
                 tear_streams_errors.append(molar_balance ** 2)
             for specie in ['CO2', 'H2O']:
                 molar_balance = (vc2_tear_stream[IDX[specie]] - vc2[IDX[specie]]) \
-                                / maingopy.pos(vc2_tear_stream[IDX[specie]])
+                                / maingopy.pos(vc2_tear_stream[IDX[specie]] + NON_ZERO_EPSILON)
                 tear_streams_errors.append(molar_balance ** 2)
-            sum_molar_balances_squared = sum(np.array(tear_streams_errors))
-            objective = sum_molar_balances_squared
-            return objective
+            self.model.equalities += tear_streams_errors
+            # sum_molar_balances_squared = sum(np.array(tear_streams_errors))
+            # objective = sum_molar_balances_squared
+            return
 
         # when just evaluating, return all stream values
         else:
