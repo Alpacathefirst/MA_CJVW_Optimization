@@ -117,7 +117,7 @@ class AnnHandler:
         h2o_ineq = -h2o
         naoh_ineq = -naoh
         co2_frac_ineq_min = -co2_frac
-        co2_frac_ineq_max = co2_frac - 0.5
+        co2_frac_ineq_max = co2_frac - 1
 
         # ineqs = [t_ineq_min, t_ineq_max, p_ineq_min, p_ineq_max, co2_ineq, h2o_ineq, naoh_ineq]
         ineqs = [t_ineq_min, t_ineq_max, p_ineq_min, p_ineq_max, co2_frac_ineq_min, co2_frac_ineq_max, co2_ineq,
