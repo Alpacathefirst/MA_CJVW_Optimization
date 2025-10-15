@@ -1,36 +1,39 @@
 from d2_pilot_plant_V2.d2_process import *
 import time
+import os
+from pathlib import Path
+import pandas as pd
 
 
 def get_solution_vars():
-    stream_vars = [434,  # lr1_co2
-                   25138,  # lr1_h2o
-                   442,  # lr1_naoh
+    stream_vars = [421,  # lr1_co2
+                   23663,  # lr1_h2o
+                   430.15,  # lr1_naoh
                    21.18,  # lr1_magnesite
                    0.55,  # lr1_forsterite
                    1.92,  # lr1_fayalite
                    10.59,  # lr1_amorphous_silica
-                   1051,  # vr1_co2
-                   125,  # vr1_h2o
-                   311,  # c2_co2
-                   62]  # c2_h2o
+                   1058,  # vr1_co2
+                   126,  # vr1_h2o
+                   295,  # c2_co2
+                   59]  # c2_h2o
     unit_temps = [64,  # t_c101
                   62,  # t_c101_isen
                   167,  # t_va101
-                  26.72,  # t_m102
-                  26.97,  # t_p102
-                  134,  # t_he101_cold
-                  376,  # t_c102
-                  371,  # t_c102_isen
-                  340,  # t_c103
-                  336,  # t_c103_isen
-                  413,  # t_c104
-                  320]  # t_c104_isen   # 330 would be way closer, 392 is reaktoro solution
+                  39,  # t_m102
+                  44,  # t_p102
+                  151,  # t_he101_cold
+                  424,  # t_c102
+                  390,  # t_c102_isen
+                  360,  # t_c103
+                  330,  # t_c103_isen
+                  436,  # t_c104
+                  400]  # t_c104_isen   # 330 would be way closer, 392 is reaktoro solution
 
-    design_vars = [2968,  # h2o_in
-                   49.188,  # NaOH in
-                   2537.998,  # CO2 in
-                   0.9]  # Liquid split
+    design_vars = [3102,  # h2o_in
+                   53.165,  # NaOH in
+                   2337,  # CO2 in
+                   0.89]  # Liquid split
 
     unit_pressures = [50,  # p v102
                       25]  # p v103
@@ -74,6 +77,14 @@ class Model(maingopy.MAiNGOmodel):
         variables = [maingopy.OptimizationVariable(maingopy.Bounds(s[i] * lb, s[i] * ub), maingopy.VT_CONTINUOUS,
                                                    names[i]) for i in range(len(names))]
 
+        # # widen bounds for unit variables (11–22): all T_* entries
+        # for idx in range(11, 23):  # 11..22 inclusive
+        #     variables[idx] = maingopy.OptimizationVariable(
+        #         maingopy.Bounds(293, 730),
+        #         maingopy.VT_CONTINUOUS,
+        #         names[idx]
+        #     )
+
         variables.append(maingopy.OptimizationVariable(maingopy.Bounds(0.8, 0.95), maingopy.VT_CONTINUOUS, "Liquid Split"))
         variables.append(maingopy.OptimizationVariable(maingopy.Bounds(45, 55), maingopy.VT_CONTINUOUS, "P_V102"))
         variables.append(maingopy.OptimizationVariable(maingopy.Bounds(24, 26), maingopy.VT_CONTINUOUS, "P_V103"))
@@ -97,7 +108,7 @@ class Model(maingopy.MAiNGOmodel):
         sold_liquid[IDX['P']] = 1
         sold_liquid[IDX['H2O']] = vars[23]
         sold_liquid[IDX['NaOH']] = vars[24]
-        sold_liquid[IDX['Forsterite']] = 1103.111
+        sold_liquid[IDX['Forsterite']] = 1103.11
         sold_liquid[IDX['Fayalite']] = 190.407
 
         proccess_inputs = [np.array(co2_in), np.array(sold_liquid)]
@@ -111,7 +122,7 @@ class Model(maingopy.MAiNGOmodel):
             # add equalities with result.eq = [equation]
             result.eq = self.equalities
             # add inequalities with result.ineq = [equation]
-            # result.ineq = self.inequalities
+            result.ineq = self.inequalities
             # result.objective = self.cost_objective()
             return result
 
@@ -120,20 +131,73 @@ class Model(maingopy.MAiNGOmodel):
             outputs = self.process.equations(proccess_inputs, self.optimal_vars, self.parameters)
             return outputs
 
-    def cost_objective(self):
-        power = 0
-        q_heat = 0
-        q_cool = 0
-        for unit_name in ['P-102']:
-            power += self.unit_power_duties[unit_name]
-        for unit_name in ['C-101', 'C-102', 'C-103', 'C-104']:
-            power += self.unit_power_duties[unit_name] * 8
-        for unit_name in ['H-102']:
-            q_heat += self.unit_heat_duties[unit_name]
-        for unit_name in ['H-101', 'R-101']:
-            q_cool -= self.unit_heat_duties[unit_name]
-        elec = power + q_heat + q_cool / 10
-        return elec / 1000 / 3600  # in KW
+    def get_power(self, m_product):
+        p_data = {}
+        total_power = 0
+        # compressor costs
+        comps = ['C-101', 'C-102', 'C-103', 'C-104']
+        pumps = ['P-102']
+        q_cool = ['H-101', 'R-101']
+        q_heat = ['H-102']
+        for name in comps + pumps + q_cool + q_heat:
+            p = self.unit_power_duties[name] / 1000 / 3600
+            q = self.unit_heat_duties[name] / 1000 / 3600
+
+            if name in comps:
+                power = p * COMPRESSOR_FACTOR
+            elif name in pumps:
+                power = p * PUMP_FACTOR
+            elif name in q_cool:
+                power = -1 * q * COOL_FACTOR
+            elif name in q_heat:
+                power = q * HEAT_FACTOR
+            else:
+                raise Exception('')
+            p_data[f'P_{name}[kWh/tonne]'] = power / m_product * 1000
+            total_power += power  # in kW
+        p_data['P_Total[kWh/tonne]'] = total_power / m_product * 1000
+        return total_power, p_data
+
+    def objective_function(self, stream_values):
+        co2_input = stream_values['V-1'][IDX['CO2']] * MOLAR_MASS['CO2']
+        h2o_input = stream_values['SLURRY'][IDX['H2O']] * MOLAR_MASS['H2O']
+        naoh_input = stream_values['SLURRY'][IDX['H2O']] * MOLAR_MASS['NaOH']
+
+        forsterite_in = stream_values['SLURRY'][IDX['Forsterite']] * MOLAR_MASS['Forsterite']
+        fayalite_in = stream_values['SLURRY'][IDX['Fayalite']] * MOLAR_MASS['Fayalite']
+
+        forsterite_out = stream_values['PRODUCT'][IDX['Forsterite']] * MOLAR_MASS['Forsterite']
+        fayalite_out = stream_values['PRODUCT'][IDX['Fayalite']] * MOLAR_MASS['Fayalite']
+        magnesite_out = stream_values['PRODUCT'][IDX['Magnesite']] * MOLAR_MASS['Magnesite']
+        silica_out = stream_values['PRODUCT'][IDX['Amorphous_Silica']] * MOLAR_MASS['Amorphous_Silica']
+
+        m_co2 = co2_input
+        m_h2o = h2o_input
+        m_naoh = naoh_input
+        m_olivine = forsterite_in + fayalite_in
+        m_product = forsterite_out + fayalite_out + magnesite_out + silica_out
+
+        power, power_data = self.get_power(m_product)
+
+        c_elec = power * PRICES['Electricity']  # power in kW, price in euro / kWh --> cost in euro / hr
+        c_co2 = m_co2 * PRICES['CO2'] / 1000  # m_co2 in kg / hr, price in euro / tonne --> cost in euro / hr
+        c_h2o = m_h2o * PRICES['H2O'] / 1000  # m_h2o in kg / hr, price in euro / tonne --> cost in euro / hr
+        c_naoh = m_naoh * PRICES['NaOH'] / 1000  # m_naoh in kg / hr, price in euro / tonne --> cost in euro / hr
+        c_olivine = m_olivine * PRICES[
+            'Olivine'] / 1000  # m_olivine in kg / hr, price in euro / tonne --> cost in euro / hr
+        c_total = c_elec + c_co2 + c_h2o + c_naoh + c_olivine
+        scaled_cost = c_total / m_product * 1000  # (euro / hr) / (kg / hr) * 1000 kg/tonne = euro/tonne
+
+        cost_data = {
+            'c_CO2 [euro/tonne]': c_co2 / m_product * 1000,
+            'c_H2O [euro/tonne]': c_h2o / m_product * 1000,
+            'c_NaOH [euro/tonne]': c_naoh / m_product * 1000,
+            'c_Olivine [euro/tonne]': c_olivine / m_product * 1000,
+            'c_Electricity [euro/tonne]': c_elec / m_product * 1000,
+            'c_Total [euro/tonne]': scaled_cost,
+        }
+
+        return scaled_cost, power_data, cost_data
 
 
 class ModelHandler:
@@ -165,7 +229,7 @@ class ModelHandler:
             100,  # p_r101
             60 + 273.15,  # t_v101
             95,  # p_v101
-            25 + 273.15,  # t_filter
+            40 + 273.15,  # t_filter
             1,  # p_filter
             60 + 273.15,  # t_co2_tank
             95,  # p_co2_tank
@@ -191,14 +255,18 @@ class ModelHandler:
         if run_opt:
             solution_vars = self.run_optimization()
         else:
+            # this will just return the predefined solution vars
             solution_vars = get_solution_vars()
         return solution_vars
 
-    def print_solution(self, solution_vars):
+    def evaluate_model(self, solution_vars):
         # evaluate model
         self.myModel.get_equations = False
         self.myModel.optimal_vars = solution_vars
         tear_stream_errors, stream_outputs = self.myModel.evaluate(solution_vars)
+        return tear_stream_errors, stream_outputs
+
+    def print_solution(self, tear_stream_errors, stream_values):
 
         def to_celsius(t):
             return t - 273.15
@@ -207,7 +275,7 @@ class ModelHandler:
             print(specie, error)
 
         # nicely display the output
-        for name, stream in stream_outputs.items():
+        for name, stream in stream_values.items():
             print(f"{'=' * 60}")
             print(f"{name.upper()}")
             print(f"{'-' * 60}")
@@ -217,40 +285,74 @@ class ModelHandler:
                     print(f"{label:<20} {to_celsius(v):>12.2f}")
                 else:
                     print(f"{label:<20} {v:>12.6g}")
-        for unit in ['P-102', 'C-101', 'C-102', 'C-103', 'C-104', 'H-102', 'H-101', 'R-101']:
-            print(f'{unit}: power: {self.myModel.unit_power_duties[unit] / 1000 / 3600}kW Q: {self.myModel.unit_heat_duties[unit] / 1000 / 3600}kW')
 
-    def run_sensitivity_analysis(self):
-        output = {}
-        pressures = np.linspace(62.5, 100, 11)
-        for p_v102 in pressures:
-            print()
+        scaled_cost, power_data, cost_data = self.myModel.objective_function(stream_values)
+
+        for unit, power in power_data.items():
+            print(f'{unit}: power: {power}[kWh/tonne]')
+
+    def run_sensitivity_analysis(self, name):
+        file_path = Path(rf"C:\Users\caspe\PycharmProjects\MA_CJVW_Optimization\outputs\sensitivity_outputs\{name}.csv")
+        if os.path.exists(file_path):
+            raise Exception('Choose different name for sensitivity analysis')
+
+        def function(p_v102, p_v103):
             self.initialise_model()
             parameters = [
                 170 + 273.15,  # t_r101
                 100,  # p_r101
                 60 + 273.15,  # t_v101
                 95,  # p_v101
-                25 + 273.15,  # t_filter
+                40 + 273.15,  # t_filter
                 1,  # p_filter
                 60 + 273.15,  # t_co2_tank
                 95,  # p_co2_tank
                 p_v102,  # p V102
-                25,  # p V103
+                p_v103,  # p V103
                 1,  # p V104
                 70 + 273.15  # T_HE1_hot_out
             ]
             self.myModel.parameters = parameters
-            self.print_solution(self.run(run_opt=True))
-            output[p_v102] = self.myModel.cost_objective()
-            print(output)
+            solution_vars = self.run(run_opt=True)
+            _, stream_values = self.evaluate_model(solution_vars)
+            scaled_cost, power_data, cost_data = self.myModel.objective_function(stream_values)
+            return power_data, cost_data
+
+        sensitivity_rows = []
+        for p_v103_v104_ratio in [5, 10, 15, 20, 25]:
+            for p_v102_v103_ratio in [2, 3, 4, 5, 6]:
+                p_v103 = p_v103_v104_ratio
+                p_v102 = p_v103 * p_v102_v103_ratio
+                if p_v102 < 100:
+                    p_data, c_data = function(p_v102=p_v102, p_v103=p_v103)
+                    row = {
+                        'p_V-102 [bar]': p_v102,
+                        'p_V-103 [bar]': p_v103,
+                        **p_data,  # e.g. P_*[kW], P_Total[kW]
+                        **c_data  # e.g. c_* [€], c_Total_scaled [€]
+                    }
+                    sensitivity_rows.append(row)
+        sensitivity_data = pd.DataFrame(sensitivity_rows)
+        sensitivity_data.to_csv(file_path, index=False)
+
+    def run_optimization_of_cost_function(self):
+        return
 
 
 if __name__ == '__main__':
     start_time = time.time()
     model_handler = ModelHandler()
-    # model_handler.print_solution(model_handler.run(run_opt=True))
-    model_handler.run_sensitivity_analysis()
+
+    # run this for a simple model validation with predefined solution variables
+    stream_errors, stream_outputs = model_handler.evaluate_model(model_handler.run(run_opt=True))
+    model_handler.print_solution(stream_errors, stream_outputs)
+
+    # run this for sensitivity analysis of cost function vs p_v102, p_v103
+    # model_handler.run_sensitivity_analysis(name='test')
+
+    # run this for optimization of p_v102 and p_v103 to get minimal of cost function
+    # model_handler.run_optimization_of_cost_function()
+
     end_time = time.time()
     elapsed_time = end_time - start_time
     print(f"Elapsed time: {elapsed_time} seconds")

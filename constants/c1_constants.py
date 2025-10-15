@@ -4,11 +4,18 @@ from constants.c2_database_values import *
 NN_DIR = r'C:\Users\caspe\PycharmProjects\MA_CJVW_Optimization\inputs\d6_trained_nn'
 TRANSFORMERS_DIR = r'C:\Users\caspe\PycharmProjects\MA_CJVW_Optimization\inputs\d7_trained_nn_transformers'
 # VLE_FILES = {'with naoh': r'DATASET_LOW_P_250911_refined_3_1', 'no naoh': r'DATASET_VAPOR_250912_refined_3_2'}
-VLE_FILES = {'with naoh': r'DATASET_250911_refined_1_1', 'no naoh': r'DATASET_VAPOR_250912_refined_3_2'}
-HS_FILES = {'with naoh': r'DATASET_S_H_250911_refined_1_1', 'no naoh': r'DATASET_VAPOR_250912_refined_3_1'}
-ANN_FILES = {'vle': VLE_FILES, 'hs': HS_FILES}
+
+# VLE_FILES = {'with naoh': r'DATASET_250911_refined_1_1', 'no naoh': r'DATASET_VAPOR_250912_refined_3_2'}
+VLE_FILES = {'with naoh': r'251012_VLE_with_NaOH_refined_6_1', 'no naoh': r'251014_VLE_no_NaOH_refined_2_1'}
+VLE_A_BASED_FILES = {'with naoh': r'251012_VLE_with_NaOH_refined_6_2', 'no naoh': r'251014_VLE_no_NaOH_refined_2_2'}
+# HS_FILES = {'with naoh': r'DATASET_S_H_250911_refined_1_1', 'no naoh': r'DATASET_VAPOR_250912_refined_3_1'}
+HS_FILES = {'with naoh': r'251012_VLE_with_NaOH_refined_7_2', 'no naoh': r'251014_VLE_no_NaOH_higherT_2'}
+
+ANN_FILES = {'vle': VLE_FILES, 'vle_A_based': VLE_A_BASED_FILES, 'hs': HS_FILES}
 
 gas_species = ['CO2(g)', 'H2O(g)']
+
+ACTIVATE_A_BASED_VLE = False
 
 g_hf, g_a, g_b, g_c, g_d, g_sr, g_vr = [], [], [], [], [], [], []
 
@@ -74,6 +81,16 @@ THERMOCHEMICAL_DATA = {
     "CO2": {"Tref": 298.15, "S298": 213.7, "Hf298": -393_510.0, "Gf298": -394_350.0},
     "H2O": {"Tref": 298.15, "S298": 188.8, "Hf298": -241_810.0, "Gf298": -228_560.0},
 }
+REF_STATE_AQ = {
+    "CO2": {"Hf298": -413_798.0},
+    "H2O": {"Hf298": -287_721.13},  # liquid ref state
+    "NaOH": {"Hf298": -469_863.0}
+}
+REF_STATE_HS = {
+    "CO2": {"Hf298": -393_510.0},
+    "H2O": {"Hf298": -287_721.13},  # liquid ref state
+    "NaOH": {"Hf298": -469_863.0}}
+
 # molar masses in kg/mol
 MOLAR_MASS = {
     "CO2": 0.0440095,
@@ -95,3 +112,16 @@ DENSITY = {
 
 # Ideal Gas constant
 R = 8.314  # J / mol / K
+
+# for the optimization of a cost function
+PRICES = {"Electricity": 0.21,  # Euro per kWh
+          "CO2": 150,  # Euro / tonne
+          "H2O": 2.06,  # Euro / cum  ( I assume euro per tonne)
+          "NaOH": 275,  # Euro / tonne
+          "Olivine": 50}  # Euro / tonne
+
+# for the power consumption of different units
+COMPRESSOR_FACTOR = 8
+PUMP_FACTOR = 1
+COOL_FACTOR = 1 / 60
+HEAT_FACTOR = 1

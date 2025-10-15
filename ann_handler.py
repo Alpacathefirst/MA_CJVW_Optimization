@@ -10,7 +10,7 @@ class AnnHandler:
         self.load_models_and_bounds()
 
     def load_models_and_bounds(self):
-        for ann_type in ['vle', 'hs']:
+        for ann_type in ['vle', 'vle_A_based', 'hs']:
             self.anns[ann_type] = dict()
             self.input_bounds[ann_type] = dict()
             for input_type in ['with naoh', 'no naoh']:
@@ -29,9 +29,9 @@ class AnnHandler:
 
         if self.model.get_equations:
             # co2_frac = -co2 / maingopy.neg(-(co2 + h2o + NON_ZERO_EPSILON))
-            # co2_frac = co2 / maingopy.pos((co2 + h2o + NON_ZERO_EPSILON))
-            den = maingopy.lb_func(co2 + h2o, NON_ZERO_EPSILON)
-            co2_frac = co2 / den
+            co2_frac = co2 / maingopy.pos((co2 + h2o + NON_ZERO_EPSILON))
+            # den = maingopy.lb_func(co2 + h2o, NON_ZERO_EPSILON)
+            # co2_frac = co2 / den
 
             # self.model.inequalities.append(-co2_frac)
             if input_type == 'with naoh':
@@ -61,6 +61,9 @@ class AnnHandler:
         if ann_type == 'vle':
             # inverse log transform y_h2o
             scaled[0] = 10 ** scaled[0] - 1e-16
+        elif ann_type == 'vle_A_based':
+            # inverse log transform A_H2O
+            scaled[1] = 10 ** scaled[1] - 1e-16
         return scaled
 
     def run_ann(self, inputs, ann_type, input_type):
@@ -81,8 +84,11 @@ class AnnHandler:
         if ann_type == 'vle':
             vap_out, aq_out = self.handle_vle_output(inputs, input_type, ann_outputs, t, p, co2, h2o, naoh, n_total)
             return vap_out, aq_out, ineqs
+        elif ann_type == 'vle_A_based':
+            vap_out, aq_out = self.handle_vle_A_based_output(inputs, input_type, ann_outputs, t, p, co2, h2o, naoh)
+            return vap_out, aq_out, ineqs
         elif ann_type == 'hs':
-            outputs = self.handle_hs_output(inputs, input_type, ann_outputs, n_total)
+            outputs = self.handle_hs_output(inputs, input_type, ann_outputs, t, p, co2, h2o, naoh, n_total)
             return outputs, ineqs
 
     # the inequalities are the bounds of the ann_inputs, for which the network is trained
@@ -97,22 +103,23 @@ class AnnHandler:
         # co2_ineq = -co2
         # h2o_ineq = -h2o
         # naoh_ineq = -naoh
-        # co2_frac_ineq_min = min_in[2] - co2_frac
+        # co2_frac_ineq_min = - co2_frac
         # co2_frac_ineq_max = co2_frac - max_in[2]
 
         t_ineq_min = 273.15 - t
         t_ineq_max = t - 737.15
         p_ineq_min = 1 - p
         p_ineq_max = p - 200
-        co2_ineq = NON_ZERO_EPSILON-co2
-        h2o_ineq = NON_ZERO_EPSILON-h2o
-        naoh_ineq = NON_ZERO_EPSILON-naoh
-        co2_frac_ineq_min = NON_ZERO_EPSILON - co2_frac
+        co2_ineq = -co2
+        h2o_ineq = -h2o
+        naoh_ineq = -naoh
+        co2_frac_ineq_min = -co2_frac
         co2_frac_ineq_max = co2_frac - 1
 
-
         # ineqs = [t_ineq_min, t_ineq_max, p_ineq_min, p_ineq_max, co2_ineq, h2o_ineq, naoh_ineq]
-        ineqs = [t_ineq_min, t_ineq_max, p_ineq_min, p_ineq_max, co2_frac_ineq_min, co2_frac_ineq_max, co2_ineq, h2o_ineq, naoh_ineq]
+        ineqs = [t_ineq_min, t_ineq_max, p_ineq_min, p_ineq_max, co2_frac_ineq_min, co2_frac_ineq_max, co2_ineq,
+                 h2o_ineq, naoh_ineq]
+
         # ineqs = []
         if input_type == 'with naoh':
             molality_ineq_min = 0 - molality
@@ -158,12 +165,47 @@ class AnnHandler:
 
         return vap_outputs, aq_outputs
 
-    def handle_hs_output(self, inputs, input_type, ann_outputs, n_total):
-        # ann_outputs: ['enthalpy', 'entropy']
+    def handle_vle_A_based_output(self, inputs, input_type, ann_outputs, t, p, co2, h2o, naoh):
+        # ann_outputs: [A_CO2, A_H2O]
+        co2_liq = ann_outputs[0] * co2
+        h2o_vap = ann_outputs[1] * h2o
+
+        # recreate the complete output arrays
+        vap_outputs = [0] * len(NAMES)
+        aq_outputs = [0] * len(NAMES)
+
+        vap_outputs[IDX['T']] = t
+        vap_outputs[IDX['P']] = p
+
+        vap_outputs[IDX['CO2']] = co2 - co2_liq
+        vap_outputs[IDX['H2O']] = h2o_vap
+
+        aq_outputs[IDX['T']] = t
+        aq_outputs[IDX['P']] = p
+        aq_outputs[IDX['CO2']] = co2_liq
+        aq_outputs[IDX['H2O']] = h2o - h2o_vap
+
+        if input_type == 'with naoh':
+            aq_outputs[IDX['NaOH']] = naoh
+            for s in SOL_SPECIES:
+                aq_outputs[IDX[s]] = inputs[IDX[s]]
+
+        return vap_outputs, aq_outputs
+
+    def handle_hs_output(self, inputs, input_type, ann_outputs, t, p, co2, h2o, naoh, n_total):
+        # ann_outputs: ['entropy', 'dH_approx']
+        # molar amount co2_aq is approx molar amount naoh
+        h0 = co2 * REF_STATE_HS['CO2']['Hf298'] + h2o * REF_STATE_HS['H2O']['Hf298'] + \
+                   naoh * REF_STATE_HS['NaOH']['Hf298']
+
+        dh = ann_outputs[1] * n_total
+        enthalpy = h0 + dh
+        # print(t, p, co2 / (co2 + h2o), naoh / (h2o * MOLAR_MASS['H2O']))
+        # print('t, p, h_aproxm dH_approx, enthalpy', t, p, h_approx/n_total, ann_outputs[1], enthalpy / n_total)
         outputs = list(inputs)
         # VLE properties from ANN
-        outputs[IDX['enthalpy_vle']] = ann_outputs[0] * n_total
-        outputs[IDX['entropy_vle']] = ann_outputs[1] * n_total
+        outputs[IDX['enthalpy_vle']] = enthalpy
+        outputs[IDX['entropy_vle']] = ann_outputs[0] * n_total
 
         if input_type == 'with naoh':
             s_outputs = []
@@ -173,31 +215,21 @@ class AnnHandler:
 
         return outputs
 
-    def handle_hs0_gases(self, t, p, gases):
-        t_ref = 298.15
-        p_ref = 1  # can get away with units bar
-        CpdT = A_GASES * (t - t_ref) + 0.5 * B_GASES * (t ** 2 - t_ref ** 2) - C_GASES * (
-                    1.0 / t - 1.0 / t_ref) + 2.0 * D_GASES * (t ** 0.5 - t_ref ** 0.5)
-        Vdp = R * t * math.log(p / p_ref)
-        CpdlnT = A_GASES * math.log(t / t_ref) + B_GASES * (t - t_ref) - 0.5 * C_GASES * (
-                    1 / t ** 2 - 1 / t_ref ** 2) - 2.0 * D_GASES * (1 / t ** 0.5 - 1 / t_ref ** 0.5)
-        h = CpdT + Vdp
-        enthalpy_gases = np.sum(np.dot(gases, h + Hf_GASES))
-        entropy_gases = np.sum(np.dot(gases, SR_GASES + CpdlnT))
-        return enthalpy_gases, entropy_gases
-
     def enthalpy_solids(self, t, solids):
         # A, B, C, D, Hf are defined in c1_constants
         t_ref = 298.15
         t = maingopy.pos(t) if self.model.get_equations else t
-        h = A_SOLID * (t - t_ref) + 0.5 * B_SOLID * (t ** 2 - t_ref ** 2) + C_SOLID * (1 / t_ref - 1 / t) + 2 * D_SOLID * (
-                t ** 0.5 - t_ref ** 0.5)
+        h = A_SOLID * (t - t_ref) + 0.5 * B_SOLID * (t ** 2 - t_ref ** 2) + C_SOLID * (
+                    1 / t_ref - 1 / t) + 2 * D_SOLID * (
+                    t ** 0.5 - t_ref ** 0.5)
         enthalpy_s = np.sum(np.dot(solids, h + Hf_SOLID))
         return enthalpy_s
 
     def evaluate(self, ann_type, inputs, input_type):
         if ann_type == 'vle':
-            vap_output, aq_output, ineqs_vle = self.run_ann(inputs, ann_type='vle', input_type=input_type)
+            if ACTIVATE_A_BASED_VLE:
+                ann_type = 'vle_A_based'
+            vap_output, aq_output, ineqs_vle = self.run_ann(inputs, ann_type=ann_type, input_type=input_type)
             vap_output_complete, ineqs_vap = self.run_ann(vap_output, ann_type='hs', input_type=input_type)
             aq_output_complete, ineqs_aq = self.run_ann(aq_output, ann_type='hs', input_type=input_type)
             ineqs = ineqs_vle + ineqs_vap + ineqs_aq
