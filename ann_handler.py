@@ -10,7 +10,7 @@ class AnnHandler:
         self.load_models_and_bounds()
 
     def load_models_and_bounds(self):
-        for ann_type in ['vle', 'vle_A_based', 'hs']:
+        for ann_type in ['vle', 'vle_A_based', 'vle_mixed', 'hs']:
             self.anns[ann_type] = dict()
             self.input_bounds[ann_type] = dict()
             for input_type in ['with naoh', 'no naoh']:
@@ -61,7 +61,7 @@ class AnnHandler:
         if ann_type == 'vle':
             # inverse log transform y_h2o
             scaled[0] = 10 ** scaled[0] - 1e-16
-        elif ann_type == 'vle_A_based':
+        elif ann_type == 'vle_A_based' or ann_type == 'vle_mixed':
             # inverse log transform A_H2O
             scaled[1] = 10 ** scaled[1] - 1e-16
         return scaled
@@ -86,6 +86,9 @@ class AnnHandler:
             return vap_out, aq_out, ineqs
         elif ann_type == 'vle_A_based':
             vap_out, aq_out = self.handle_vle_A_based_output(inputs, input_type, ann_outputs, t, p, co2, h2o, naoh)
+            return vap_out, aq_out, ineqs
+        elif ann_type == 'vle_mixed':
+            vap_out, aq_out = self.handle_vle_mixed_output(inputs, input_type, ann_outputs, t, p, co2, h2o, naoh)
             return vap_out, aq_out, ineqs
         elif ann_type == 'hs':
             outputs = self.handle_hs_output(inputs, input_type, ann_outputs, t, p, co2, h2o, naoh, n_total)
@@ -114,7 +117,7 @@ class AnnHandler:
         h2o_ineq = -h2o
         naoh_ineq = -naoh
         co2_frac_ineq_min = -co2_frac
-        co2_frac_ineq_max = co2_frac - 1
+        co2_frac_ineq_max = co2_frac - 0.5
 
         # ineqs = [t_ineq_min, t_ineq_max, p_ineq_min, p_ineq_max, co2_ineq, h2o_ineq, naoh_ineq]
         ineqs = [t_ineq_min, t_ineq_max, p_ineq_min, p_ineq_max, co2_frac_ineq_min, co2_frac_ineq_max, co2_ineq,
@@ -192,6 +195,44 @@ class AnnHandler:
 
         return vap_outputs, aq_outputs
 
+    def handle_vle_mixed_output(self, inputs, input_type, ann_outputs, t, p, co2, h2o, naoh):
+        # ann_outputs: [A_CO2, Y_h2o]
+        co2_liq = ann_outputs[0] * co2
+        co2_vap = co2 - co2_liq
+
+        # # after:
+        # if self.model.get_equations:
+        #     denom = maingopy.pos(1 - ann_outputs[1] + NON_ZERO_EPSILON)
+        # else:
+        #     # keep it purely numeric in eval mode and avoid 0-div
+        #     denom_raw = 1 - ann_outputs[1]
+        #     denom = denom_raw if denom_raw > 0 else NON_ZERO_EPSILON
+
+        # h2o_vap = ann_outputs[1] * co2_vap / denom
+        h2o_vap = ann_outputs[1] * co2_vap
+
+        # recreate the complete output arrays
+        vap_outputs = [0] * len(NAMES)
+        aq_outputs = [0] * len(NAMES)
+
+        vap_outputs[IDX['T']] = t
+        vap_outputs[IDX['P']] = p
+
+        vap_outputs[IDX['CO2']] = co2_vap
+        vap_outputs[IDX['H2O']] = h2o_vap
+
+        aq_outputs[IDX['T']] = t
+        aq_outputs[IDX['P']] = p
+        aq_outputs[IDX['CO2']] = co2_liq
+        aq_outputs[IDX['H2O']] = h2o - h2o_vap
+
+        if input_type == 'with naoh':
+            aq_outputs[IDX['NaOH']] = naoh
+            for s in SOL_SPECIES:
+                aq_outputs[IDX[s]] = inputs[IDX[s]]
+
+        return vap_outputs, aq_outputs
+
     def handle_hs_output(self, inputs, input_type, ann_outputs, t, p, co2, h2o, naoh, n_total):
         # ann_outputs: ['entropy', 'dH_approx']
         # molar amount co2_aq is approx molar amount naoh
@@ -229,6 +270,9 @@ class AnnHandler:
         if ann_type == 'vle':
             if ACTIVATE_A_BASED_VLE:
                 ann_type = 'vle_A_based'
+            if ACTIVATE_VLE_MIXED:
+                if input_type == 'with naoh':  # TODO: delete this when also having mixed vle for
+                    ann_type = 'vle_mixed'
             vap_output, aq_output, ineqs_vle = self.run_ann(inputs, ann_type=ann_type, input_type=input_type)
             vap_output_complete, ineqs_vap = self.run_ann(vap_output, ann_type='hs', input_type=input_type)
             aq_output_complete, ineqs_aq = self.run_ann(aq_output, ann_type='hs', input_type=input_type)

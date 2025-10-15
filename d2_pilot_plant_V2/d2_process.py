@@ -63,7 +63,7 @@ class EvaluateProcess:
                                           t_out=t_va101,
                                           adiabatic=True)
         vr3 = self.unit_handler.change_pt(name='H-101',
-                                          inputs=[vr2, vc2_pre_tear_stream],
+                                          inputs=[vr2, vc2_tear_stream],
                                           input_type='no naoh',
                                           t_out=t_co2_tank,
                                           adiabatic=False)
