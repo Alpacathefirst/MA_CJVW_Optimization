@@ -14,8 +14,12 @@ class EvaluateProcess:
         t_c104, t_c104_isen = optimization_variables[11:23]
 
         liquid_split = optimization_variables[26]
-        # p_v102 = optimization_variables[27]
-        # p_v103 = optimization_variables[28]
+
+        if self.model.run_cost_function_optimization:
+            ratio_pv102_p_v103 = optimization_variables[27]
+            ratio_pv103_p_v104 = optimization_variables[28]
+            p_v103 = ratio_pv103_p_v104
+            p_v102 = ratio_pv102_p_v103 * p_v103
 
         lr1_pre_tear_stream = [0] * len(NAMES)
         lr1_co2, lr1_h2o, lr1_naoh, lr1_magnesite, lr1_forsterite, lr1_fayalite, lr1_sio2 = optimization_variables[0:7]
@@ -236,8 +240,6 @@ class EvaluateProcess:
                                 / maingopy.pos(vc2_tear_stream[IDX[specie]] + NON_ZERO_EPSILON)
                 tear_streams_errors.append(molar_balance ** 2)
             self.model.equalities += tear_streams_errors
-            # sum_molar_balances_squared = sum(np.array(tear_streams_errors))
-            # objective = sum_molar_balances_squared
             return
 
         # when just evaluating, return all stream values
@@ -256,6 +258,36 @@ class EvaluateProcess:
                 den3 = vc2_tear_stream[IDX[specie]]
                 molar_balance = (vc2_tear_stream[IDX[specie]] - vc2[IDX[specie]]) / den3 if den3 > 0 else 0.0
                 tear_streams_errors[f'vc2_{specie}'] = molar_balance
+
+            equalities = {}
+            # equality contraint for HE101
+            q_he101_hot = self.model.unit_heat_duties['HE-101_hot']
+            q_he101_cold = self.model.unit_heat_duties['HE-101_cold']
+            equalities['HE_101'] = (q_he101_hot + q_he101_cold) / q_he101_hot
+
+            # Equality constraint CO2
+            co2_r = vr1[IDX['CO2']]
+            co2_sto = sl4[IDX['Forsterite']] * 0.95 * 2
+            co2_sto_spec = (co2_r + co2_sto) / (co2_sto + NON_ZERO_EPSILON) - 1.5
+            equalities['CO2_sto_spec'] = co2_sto_spec
+
+            # Equality constraint SLR
+            # m_s = sum(content[IDX[s]] * MOLAR_MASS[s] for s in SOL_SPECIES)
+            m_s = sum(sl4[IDX[s]] * MOLAR_MASS[s] for s in ['Forsterite', 'Fayalite'])
+            m_w = sl4[IDX['H2O']] * MOLAR_MASS['H2O']
+            slr = m_s / (m_w + NON_ZERO_EPSILON) - 0.4
+            equalities['SLR'] = slr
+
+            # Equality constrain Molality
+            m_w = sl4[IDX['H2O']] * MOLAR_MASS['H2O']
+            mol = sl4[IDX['NaOH']] / (m_w + NON_ZERO_EPSILON) - 1
+            equalities['Molality'] = mol
+
+            # Residual Moisture
+            m_s_p = sum(product[IDX[s]] * MOLAR_MASS[s] for s in SOL_SPECIES)
+            m_l_p = sum(product[IDX[s]] * MOLAR_MASS[s] for s in VLE_SPECIES)
+            res_moisture = m_l_p / (m_s_p + NON_ZERO_EPSILON) - 0.2
+            equalities['Residual Moisture'] = res_moisture
 
             stream_dict = {
                 'V-1': v1,
@@ -288,4 +320,4 @@ class EvaluateProcess:
                 'VC3': vc3,
                 'VC2': vc2
             }
-            return tear_streams_errors, stream_dict
+            return tear_streams_errors, equalities, stream_dict

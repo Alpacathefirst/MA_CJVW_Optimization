@@ -274,7 +274,7 @@ class AnnHandler:
                 if input_type == 'with naoh':  # TODO: delete this when also having mixed vle for
                     ann_type = 'vle_mixed'
             vap_output, aq_output, ineqs_vle = self.run_ann(inputs, ann_type=ann_type, input_type=input_type)
-            vap_output_complete, ineqs_vap = self.run_ann(vap_output, ann_type='hs', input_type=input_type)
+            vap_output_complete, ineqs_vap = self.run_ann(vap_output, ann_type='hs', input_type='no naoh') # there is never NaOH in vapor
             aq_output_complete, ineqs_aq = self.run_ann(aq_output, ann_type='hs', input_type=input_type)
             ineqs = ineqs_vle + ineqs_vap + ineqs_aq
             return [vap_output_complete, aq_output_complete], ineqs

@@ -8,9 +8,11 @@ TRANSFORMERS_DIR = r'C:\Users\caspe\PycharmProjects\MA_CJVW_Optimization\inputs\
 # VLE_FILES = {'with naoh': r'DATASET_250911_refined_1_1', 'no naoh': r'DATASET_VAPOR_250912_refined_3_2'}
 VLE_FILES = {'with naoh': r'251012_VLE_with_NaOH_refined_6_1', 'no naoh': r'251014_VLE_no_NaOH_refined_2_1'}
 VLE_A_BASED_FILES = {'with naoh': r'251012_VLE_with_NaOH_refined_6_2', 'no naoh': r'251014_VLE_no_NaOH_refined_2_2'}
-VLE_MIXED_FILES = {'with naoh': '251015_VLE_with_NaOH_refined_1_2', 'no naoh': r'251014_VLE_no_NaOH_refined_2_2'}  # TODO: FIle not correct here for no naoh
+VLE_MIXED_FILES = {'with naoh': '251015_VLE_with_NaOH_refined_1_3', 'no naoh': r'251014_VLE_no_NaOH_refined_2_2'}  # TODO: FIle not correct here for no naoh
 # HS_FILES = {'with naoh': r'DATASET_S_H_250911_refined_1_1', 'no naoh': r'DATASET_VAPOR_250912_refined_3_1'}
-HS_FILES = {'with naoh': r'251012_VLE_with_NaOH_refined_7_2', 'no naoh': r'251014_VLE_no_NaOH_higherT_2'}
+# HS_FILES = {'with naoh': r'251012_VLE_with_NaOH_refined_7_2', 'no naoh': r'251014_VLE_no_NaOH_higherT_3'}  # --> THIS WORKS
+HS_FILES = {'with naoh': r'251015_VLE_with_NaOH_refined_1_5', 'no naoh': r'251014_VLE_no_NaOH_higherT_3'}
+
 
 ANN_FILES = {'vle': VLE_FILES, 'vle_A_based': VLE_A_BASED_FILES, 'vle_mixed': VLE_MIXED_FILES, 'hs': HS_FILES}
 

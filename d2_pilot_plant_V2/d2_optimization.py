@@ -4,6 +4,46 @@ import os
 from pathlib import Path
 import pandas as pd
 
+# TEMP_BOUNDS_C = {
+#     "T_C101": (20, 120),
+#     "T_C101_ISEN": (20, 120),
+#     "T_VA101": (20, 250),
+#     "T_M102": (10, 100),
+#     "T_P102": (10, 120),
+#     "T_HE101_COLD": (10, 200),
+#     "T_C102": (20, 450),
+#     "T_C102_ISEN": (20, 450),
+#     "T_C103": (20, 450),
+#     "T_C103_ISEN": (20, 450),
+#     "T_C104": (20, 500),
+#     "T_C104_ISEN": (20, 500),
+# }
+#
+# def _c_to_k_pair(bounds_c):
+#     lo_c, hi_c = bounds_c
+#     return (lo_c + 273.15, hi_c + 273.15)
+#
+#
+# TEMP_BOUNDS_K = {k: _c_to_k_pair(v) for k, v in TEMP_BOUNDS_C.items()}
+
+TEMP_BOUNDS_K = {
+    "T_C101": (300, 400),
+    "T_C101_ISEN": (300, 400),
+    "T_VA101": (400, 500),
+    "T_M102": (300, 400),
+    "T_P102": (300, 400),
+    "T_HE101_COLD": (400, 500),
+    "T_C102": (400, 700),
+    "T_C102_ISEN": (400, 700),
+    "T_C103": (400, 700),
+    "T_C103_ISEN": (400, 700),
+    "T_C104": (400, 700),
+    "T_C104_ISEN": (400, 700),
+}
+
+
+DEFAULT_TEMP_BOUNDS_K = (293.15, 730.00)  # used if a T_* name not in TEMP_BOUNDS_C
+
 
 def get_solution_vars():
     stream_vars = [421,  # lr1_co2
@@ -35,8 +75,8 @@ def get_solution_vars():
                    2337,  # CO2 in
                    0.89]  # Liquid split
 
-    unit_pressures = [50,  # p v102
-                      25]  # p v103
+    unit_pressures = [1,  # p ratio pv102_pv103
+                      25]  # p ratio p_v103_p_v104
 
     for idx, value in enumerate(unit_temps):
         unit_temps[idx] = value + 273.15
@@ -56,6 +96,7 @@ class Model(maingopy.MAiNGOmodel):
         # Initialize feedforward neural network and load data from example csv file
         self.process = EvaluateProcess(model=self)
         self.parameters = None
+        self.run_cost_function_optimization = False
 
     # We need to implement the get_variables functions for specifying the optimization variables
     def get_variables(self):
@@ -74,10 +115,11 @@ class Model(maingopy.MAiNGOmodel):
             "H2O in", "NaOH in", "CO2 in",
         ]
 
-        variables = [maingopy.OptimizationVariable(maingopy.Bounds(s[i] * lb, s[i] * ub), maingopy.VT_CONTINUOUS,
-                                                   names[i]) for i in range(len(names))]
-
-        # # widen bounds for unit variables (11–22): all T_* entries
+        # variables = [maingopy.OptimizationVariable(maingopy.Bounds(s[i] * lb, s[i] * ub), maingopy.VT_CONTINUOUS,
+        #                                            names[i]) for i in range(len(names))]
+        # for index, name in enumerate(names):
+        #     print(name, s[index] * lb, s[index] * ub)
+        # # change bounds for unit variables (11–22): all T_* entries
         # for idx in range(11, 23):  # 11..22 inclusive
         #     variables[idx] = maingopy.OptimizationVariable(
         #         maingopy.Bounds(293, 730),
@@ -85,9 +127,29 @@ class Model(maingopy.MAiNGOmodel):
         #         names[idx]
         #     )
 
+        variables = []
+        for i, name in enumerate(names):
+            # If it's a temperature variable, use explicit per-name bounds (Kelvin).
+            if name.startswith("T_"):
+                lo_k, hi_k = TEMP_BOUNDS_K.get(name, DEFAULT_TEMP_BOUNDS_K)
+                variables.append(
+                    maingopy.OptimizationVariable(
+                        maingopy.Bounds(lo_k, hi_k), maingopy.VT_CONTINUOUS, name
+                    )
+                )
+            else:
+                # Non-temperature: scaled bounds around nominal value s[i]
+                variables.append(
+                    maingopy.OptimizationVariable(
+                        maingopy.Bounds(s[i] * lb, s[i] * ub),
+                        maingopy.VT_CONTINUOUS,
+                        name,
+                    )
+                )
+        variables[10] = maingopy.OptimizationVariable(maingopy.Bounds(10, 100), maingopy.VT_CONTINUOUS, "H2O in C2")
         variables.append(maingopy.OptimizationVariable(maingopy.Bounds(0.8, 0.95), maingopy.VT_CONTINUOUS, "Liquid Split"))
-        variables.append(maingopy.OptimizationVariable(maingopy.Bounds(45, 55), maingopy.VT_CONTINUOUS, "P_V102"))
-        variables.append(maingopy.OptimizationVariable(maingopy.Bounds(24, 26), maingopy.VT_CONTINUOUS, "P_V103"))
+        variables.append(maingopy.OptimizationVariable(maingopy.Bounds(1, 25), maingopy.VT_CONTINUOUS, "P_V102"))
+        variables.append(maingopy.OptimizationVariable(maingopy.Bounds(1, 25), maingopy.VT_CONTINUOUS, "P_V103"))
 
         return variables
 
@@ -115,7 +177,7 @@ class Model(maingopy.MAiNGOmodel):
 
         # if not in evaluation mode, the process.equations will return all the equations that define the process
         if self.get_equations:
-            self.process.equations(proccess_inputs, vars, self.parameters)
+            objective = self.process.equations(proccess_inputs, vars, self.parameters)
             # the result
             result = maingopy.EvaluationContainer()
             # constraints
@@ -123,7 +185,8 @@ class Model(maingopy.MAiNGOmodel):
             result.eq = self.equalities
             # add inequalities with result.ineq = [equation]
             result.ineq = self.inequalities
-            # result.objective = self.cost_objective()
+            if self.run_cost_function_optimization:
+                result.objective = objective
             return result
 
         # just evaluate the model, no optimization
@@ -161,7 +224,7 @@ class Model(maingopy.MAiNGOmodel):
     def objective_function(self, stream_values):
         co2_input = stream_values['V-1'][IDX['CO2']] * MOLAR_MASS['CO2']
         h2o_input = stream_values['SLURRY'][IDX['H2O']] * MOLAR_MASS['H2O']
-        naoh_input = stream_values['SLURRY'][IDX['H2O']] * MOLAR_MASS['NaOH']
+        naoh_input = stream_values['SLURRY'][IDX['NaOH']] * MOLAR_MASS['NaOH']
 
         forsterite_in = stream_values['SLURRY'][IDX['Forsterite']] * MOLAR_MASS['Forsterite']
         fayalite_in = stream_values['SLURRY'][IDX['Fayalite']] * MOLAR_MASS['Fayalite']
@@ -233,8 +296,8 @@ class ModelHandler:
             1,  # p_filter
             60 + 273.15,  # t_co2_tank
             95,  # p_co2_tank
-            50,  # p V102
-            25,  # p V103
+            10,  # p V102
+            5,  # p V103
             1,  # p V104
             70 + 273.15  # T_HE1_hot_out
         ]
@@ -263,16 +326,19 @@ class ModelHandler:
         # evaluate model
         self.myModel.get_equations = False
         self.myModel.optimal_vars = solution_vars
-        tear_stream_errors, stream_outputs = self.myModel.evaluate(solution_vars)
-        return tear_stream_errors, stream_outputs
+        tear_stream_errors, equalities, stream_outputs = self.myModel.evaluate(solution_vars)
+        return tear_stream_errors, equalities, stream_outputs
 
-    def print_solution(self, tear_stream_errors, stream_values):
+    def print_solution(self, tear_stream_errors, equalities, stream_values):
 
         def to_celsius(t):
             return t - 273.15
 
         for specie, error in tear_stream_errors.items():
             print(specie, error)
+
+        for eq, error in equalities.items():
+            print(eq, error)
 
         # nicely display the output
         for name, stream in stream_values.items():
@@ -314,7 +380,7 @@ class ModelHandler:
             ]
             self.myModel.parameters = parameters
             solution_vars = self.run(run_opt=True)
-            _, stream_values = self.evaluate_model(solution_vars)
+            _, eqs, stream_values = self.evaluate_model(solution_vars)
             scaled_cost, power_data, cost_data = self.myModel.objective_function(stream_values)
             return power_data, cost_data
 
@@ -336,6 +402,8 @@ class ModelHandler:
         sensitivity_data.to_csv(file_path, index=False)
 
     def run_optimization_of_cost_function(self):
+        self.run_cost_function_optimization = True
+
         return
 
 
@@ -344,11 +412,11 @@ if __name__ == '__main__':
     model_handler = ModelHandler()
 
     # run this for a simple model validation with predefined solution variables
-    stream_errors, stream_outputs = model_handler.evaluate_model(model_handler.run(run_opt=True))
-    model_handler.print_solution(stream_errors, stream_outputs)
+    stream_errors, equalities, stream_outputs = model_handler.evaluate_model(model_handler.run(run_opt=True))
+    model_handler.print_solution(stream_errors, equalities, stream_outputs)
 
     # run this for sensitivity analysis of cost function vs p_v102, p_v103
-    # model_handler.run_sensitivity_analysis(name='test')
+    model_handler.run_sensitivity_analysis(name='251016_sens_analysis_2')
 
     # run this for optimization of p_v102 and p_v103 to get minimal of cost function
     # model_handler.run_optimization_of_cost_function()
