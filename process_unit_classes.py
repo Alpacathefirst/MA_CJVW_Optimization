@@ -307,10 +307,10 @@ class CompressorUnit(BaseUnit):
 
         s_eq = (s_out_isentropic - s_in) / (base_s + 50)  # TODO: this +50 is used to make sure at s values close to zero the isentropic calculation doesnt break down
         # print(self.name, s_out_isentropic, s_in, base_s)
-        print(self.name, 's_eq', s_eq)
+        # print(self.name, 's_eq', s_eq)
         # efficiency: eta = (h2s - h1) / (h2 - h1)  =>  eta*(h2 - h1) - (h2s - h1) = 0
         h_eq = (self.isentropic_eff * (h_out - self.h_in) - (h_out_isentropic - self.h_in)) / base_h
-        print(self.name, 'h_eq', h_eq)
+        # print(self.name, 'h_eq', h_eq)
         self.power = h_out - self.h_in
         self.Q = h_out - self.h_in - self.power
         return [s_eq, h_eq]

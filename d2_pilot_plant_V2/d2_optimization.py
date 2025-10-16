@@ -177,7 +177,7 @@ class Model(maingopy.MAiNGOmodel):
 
         # if not in evaluation mode, the process.equations will return all the equations that define the process
         if self.get_equations:
-            objective = self.process.equations(proccess_inputs, vars, self.parameters)
+            stream_values = self.process.equations(proccess_inputs, vars, self.parameters)
             # the result
             result = maingopy.EvaluationContainer()
             # constraints
@@ -186,7 +186,7 @@ class Model(maingopy.MAiNGOmodel):
             # add inequalities with result.ineq = [equation]
             result.ineq = self.inequalities
             if self.run_cost_function_optimization:
-                result.objective = objective
+                result.objective = self.objective_function(stream_values)[0]
             return result
 
         # just evaluate the model, no optimization
@@ -278,14 +278,15 @@ class ModelHandler:
         myMAiNGO.set_option("epsilonA", 1e-3)
         myMAiNGO.set_option('epsilonR', 1e-2)
         myMAiNGO.set_option('deltaEq', 1e-2)  # when equality constraint is met
+        myMAiNGO.set_option("maxTime", 200)
 
         # We can have MAiNGO read a settings file:
-        # fileName = ""
+        BASE = Path(r'C:\Users\caspe\PycharmProjects\MA_CJVW_Optimization\outputs\optimization_outputs')
         # myMAiNGO.read_settings(fileName) # If fileName is empty, MAiNGO will attempt to open MAiNGOSettings.txt
-        myMAiNGO.set_log_file_name(".logs/my_log_file.log")
+        myMAiNGO.set_log_file_name(str(BASE / "run.log"))
         myMAiNGO.set_option("writeCsv", True)
-        myMAiNGO.set_iterations_csv_file_name(".logs/iterations.csv")
-        myMAiNGO.set_solution_and_statistics_csv_file_name(".logs/solution_and_statistics.csv")
+        myMAiNGO.set_iterations_csv_file_name(str(BASE / "iterations.csv"))
+        myMAiNGO.set_solution_and_statistics_csv_file_name(str(BASE / "solution_and_statistics.csv"))
 
         parameters = [
             170 + 273.15,  # t_r101
@@ -402,8 +403,10 @@ class ModelHandler:
         sensitivity_data.to_csv(file_path, index=False)
 
     def run_optimization_of_cost_function(self):
-        self.run_cost_function_optimization = True
-
+        self.initialise_model()
+        self.myModel.run_cost_function_optimization = True
+        solution_vars = self.run(run_opt=True)
+        print(solution_vars)
         return
 
 
@@ -412,14 +415,14 @@ if __name__ == '__main__':
     model_handler = ModelHandler()
 
     # run this for a simple model validation with predefined solution variables
-    stream_errors, equalities, stream_outputs = model_handler.evaluate_model(model_handler.run(run_opt=True))
-    model_handler.print_solution(stream_errors, equalities, stream_outputs)
+    # stream_errors, equalities, stream_outputs = model_handler.evaluate_model(model_handler.run(run_opt=True))
+    # model_handler.print_solution(stream_errors, equalities, stream_outputs)
 
     # run this for sensitivity analysis of cost function vs p_v102, p_v103
-    model_handler.run_sensitivity_analysis(name='251016_sens_analysis_2')
+    # model_handler.run_sensitivity_analysis(name='251016_sens_analysis_2')
 
     # run this for optimization of p_v102 and p_v103 to get minimal of cost function
-    # model_handler.run_optimization_of_cost_function()
+    model_handler.run_optimization_of_cost_function()
 
     end_time = time.time()
     elapsed_time = end_time - start_time

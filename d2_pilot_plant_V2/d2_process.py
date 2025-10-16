@@ -240,7 +240,40 @@ class EvaluateProcess:
                                 / maingopy.pos(vc2_tear_stream[IDX[specie]] + NON_ZERO_EPSILON)
                 tear_streams_errors.append(molar_balance ** 2)
             self.model.equalities += tear_streams_errors
-            return
+
+            stream_dict = {
+                'V-1': v1,
+                'V-2': v2,
+                'GPURGE2': gpurge1,
+                'V-3': v3,
+                'V-4': v4,
+                'V-R1': vr1,
+                'V-R2': vr2,
+                'V-R3': vr3,
+                'LPURGE': lpurge,
+                'V-R4': vr4,
+                'SLURRY': solid_liquid,
+                'S-L-1': sl1,
+                'S-L-2': sl2,
+                'S-L-3': sl3,
+                'S-L-4': sl4,
+                'P-R': pr,
+                'P-1': p1,
+                'P-2': p2,
+                'P-3': p3,
+                'P-4': p4,
+                'P-7': p7,
+                'LR-1': lr1,
+                'PRODUCT': product,
+                'VV4': vv4,
+                'VV3': vv3,
+                'VV2': vv2,
+                'VC4': vc4,
+                'VC3': vc3,
+                'VC2': vc2
+            }
+
+            return stream_dict
 
         # when just evaluating, return all stream values
         else:
