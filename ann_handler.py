@@ -10,14 +10,22 @@ class AnnHandler:
         self.load_models_and_bounds()
 
     def load_models_and_bounds(self):
-        for ann_type in ['vle', 'vle_A_based', 'vle_mixed', 'hs']:
+        for ann_type in ['XY', 'AA', 'ALOAD', 'AY', 'HS']:
             self.anns[ann_type] = dict()
             self.input_bounds[ann_type] = dict()
             for input_type in ['with naoh', 'no naoh']:
+                file_id = ANN_FILES.get(ann_type, {}).get(input_type)
+
+                # Accept None: skip loading and store None placeholders
+                if file_id is None:
+                    self.anns[ann_type][input_type] = None
+                    self.input_bounds[ann_type][input_type] = None
+                    continue
+
                 ann = maingopy.melonpy.FeedForwardNet()
-                ann.load_model(NN_DIR, f'{ANN_FILES[ann_type][input_type]}.xml', maingopy.melonpy.XML)
+                ann.load_model(NN_DIR, f'{file_id}.xml', maingopy.melonpy.XML)
                 self.anns[ann_type][input_type] = ann
-                self.input_bounds[ann_type][input_type] = get_min_max(ANN_FILES[ann_type][input_type])
+                self.input_bounds[ann_type][input_type] = get_min_max(file_id)
 
     def get_stream_specs(self, inputs, input_type):
         t = inputs[IDX['T']]
@@ -58,10 +66,10 @@ class AnnHandler:
         min_out = self.input_bounds[ann_type][input_type]['min_out']
         max_out = self.input_bounds[ann_type][input_type]['max_out']
         scaled = 0.5 * (unscaled + 1) * (max_out - min_out) + min_out
-        if ann_type == 'vle':
+        if ann_type == 'XY':
             # inverse log transform y_h2o
             scaled[0] = 10 ** scaled[0] - 1e-16
-        elif ann_type == 'vle_A_based' or ann_type == 'vle_mixed':
+        elif ann_type in ['ALOAD', 'AA', 'AY']:
             # inverse log transform A_H2O
             scaled[1] = 10 ** scaled[1] - 1e-16
         return scaled
@@ -81,23 +89,26 @@ class AnnHandler:
             ann_outputs_scaled = ann.calculate_prediction_reduced_space(ann_inputs_scaled)
         # scale the outputs back
         ann_outputs = self.inverse_scale_output(np.array(ann_outputs_scaled), ann_type=ann_type, input_type=input_type)
-        if ann_type == 'vle':
-            vap_out, aq_out = self.handle_vle_output(inputs, input_type, ann_outputs, t, p, co2, h2o, naoh, n_total)
+        if ann_type == 'XY':
+            vap_out, aq_out = self.handle_vle_xy_output(inputs, input_type, ann_outputs, t, p, co2, h2o, naoh, n_total)
             return vap_out, aq_out, ineqs
-        elif ann_type == 'vle_A_based':
+        elif ann_type == 'AA':
             vap_out, aq_out = self.handle_vle_A_based_output(inputs, input_type, ann_outputs, t, p, co2, h2o, naoh)
             return vap_out, aq_out, ineqs
-        elif ann_type == 'vle_mixed':
-            vap_out, aq_out = self.handle_vle_mixed_output(inputs, input_type, ann_outputs, t, p, co2, h2o, naoh)
+        elif ann_type == 'ALOAD':
+            vap_out, aq_out = self.handle_vle_load_output(inputs, input_type, ann_outputs, t, p, co2, h2o, naoh)
             return vap_out, aq_out, ineqs
-        elif ann_type == 'hs':
+        elif ann_type == 'AY':
+            vap_out, aq_out = self.handle_vle_AY_output(inputs, input_type, ann_outputs, t, p, co2, h2o, naoh)
+            return vap_out, aq_out, ineqs
+        elif ann_type == 'HS':
             outputs = self.handle_hs_output(inputs, input_type, ann_outputs, t, p, co2, h2o, naoh, n_total)
             return outputs, ineqs
 
     # the inequalities are the bounds of the ann_inputs, for which the network is trained
     def get_ineqs_and_ann_inputs(self, ann_type, input_type, t, p, co2, h2o, naoh, co2_frac, molality):
-        min_in = self.input_bounds[ann_type][input_type]['min_in']
-        max_in = self.input_bounds[ann_type][input_type]['max_in']
+        # min_in = self.input_bounds[ann_type][input_type]['min_in']
+        # max_in = self.input_bounds[ann_type][input_type]['max_in']
 
         # t_ineq_min = min_in[0] - t
         # t_ineq_max = t - max_in[0]
@@ -138,7 +149,7 @@ class AnnHandler:
         ann_inputs_scaled = self.scale_input(np.array(ann_inputs), ann_type=ann_type, input_type=input_type)
         return ineqs, ann_inputs_scaled
 
-    def handle_vle_output(self, inputs, input_type, ann_outputs, t, p, co2, h2o, naoh, n_total):
+    def handle_vle_xy_output(self, inputs, input_type, ann_outputs, t, p, co2, h2o, naoh, n_total):
         # ann_outputs: ['Y_H2O', 'X_CO2', 'vapor fraction']
         n_vap = n_total * ann_outputs[2]
         n_liq = n_total - n_vap
@@ -195,21 +206,49 @@ class AnnHandler:
 
         return vap_outputs, aq_outputs
 
-    def handle_vle_mixed_output(self, inputs, input_type, ann_outputs, t, p, co2, h2o, naoh):
+    def handle_vle_load_output(self, inputs, input_type, ann_outputs, t, p, co2, h2o, naoh):
+        # ann_outputs: [A_CO2, load_h2o]
+        co2_liq = ann_outputs[0] * co2
+        co2_vap = co2 - co2_liq
+
+        # h2o_vap = ann_outputs[1] * co2_vap / denom
+        h2o_vap = ann_outputs[1] * co2_vap
+
+        # recreate the complete output arrays
+        vap_outputs = [0] * len(NAMES)
+        aq_outputs = [0] * len(NAMES)
+
+        vap_outputs[IDX['T']] = t
+        vap_outputs[IDX['P']] = p
+
+        vap_outputs[IDX['CO2']] = co2_vap
+        vap_outputs[IDX['H2O']] = h2o_vap
+
+        aq_outputs[IDX['T']] = t
+        aq_outputs[IDX['P']] = p
+        aq_outputs[IDX['CO2']] = co2_liq
+        aq_outputs[IDX['H2O']] = h2o - h2o_vap
+
+        if input_type == 'with naoh':
+            aq_outputs[IDX['NaOH']] = naoh
+            for s in SOL_SPECIES:
+                aq_outputs[IDX[s]] = inputs[IDX[s]]
+
+        return vap_outputs, aq_outputs
+
+    def handle_vle_AY_output(self, inputs, input_type, ann_outputs, t, p, co2, h2o, naoh):
         # ann_outputs: [A_CO2, Y_h2o]
         co2_liq = ann_outputs[0] * co2
         co2_vap = co2 - co2_liq
 
-        # # after:
-        # if self.model.get_equations:
-        #     denom = maingopy.pos(1 - ann_outputs[1] + NON_ZERO_EPSILON)
-        # else:
-        #     # keep it purely numeric in eval mode and avoid 0-div
-        #     denom_raw = 1 - ann_outputs[1]
-        #     denom = denom_raw if denom_raw > 0 else NON_ZERO_EPSILON
+        if self.model.get_equations:
+            denom = maingopy.pos(1 - ann_outputs[1] + NON_ZERO_EPSILON)
+        else:
+            # keep it purely numeric in eval mode and avoid 0-div
+            denom_raw = 1 - ann_outputs[1]
+            denom = denom_raw if denom_raw > 0 else NON_ZERO_EPSILON
 
-        # h2o_vap = ann_outputs[1] * co2_vap / denom
-        h2o_vap = ann_outputs[1] * co2_vap
+        h2o_vap = ann_outputs[1] * co2_vap / denom
 
         # recreate the complete output arrays
         vap_outputs = [0] * len(NAMES)
@@ -268,18 +307,17 @@ class AnnHandler:
 
     def evaluate(self, ann_type, inputs, input_type):
         if ann_type == 'vle':
-            if ACTIVATE_A_BASED_VLE:
-                ann_type = 'vle_A_based'
-            if ACTIVATE_VLE_MIXED:
-                if input_type == 'with naoh':  # TODO: delete this when also having mixed vle for
-                    ann_type = 'vle_mixed'
+            if input_type == 'with naoh':
+                ann_type = VLE_TYPE_WITH_NaOH
+            elif input_type == 'no naoh':
+                ann_type = VLE_TYPE_NO_NaOH
             vap_output, aq_output, ineqs_vle = self.run_ann(inputs, ann_type=ann_type, input_type=input_type)
-            vap_output_complete, ineqs_vap = self.run_ann(vap_output, ann_type='hs', input_type='no naoh') # there is never NaOH in vapor
-            aq_output_complete, ineqs_aq = self.run_ann(aq_output, ann_type='hs', input_type=input_type)
+            vap_output_complete, ineqs_vap = self.run_ann(vap_output, ann_type='HS', input_type='no naoh') # there is never NaOH in vapor
+            aq_output_complete, ineqs_aq = self.run_ann(aq_output, ann_type='HS', input_type=input_type)
             ineqs = ineqs_vle + ineqs_vap + ineqs_aq
             return [vap_output_complete, aq_output_complete], ineqs
-        elif ann_type == 'hs':
-            output, ineqs = self.run_ann(inputs, ann_type='hs', input_type=input_type)
+        elif ann_type == 'HS':
+            output, ineqs = self.run_ann(inputs, ann_type='HS', input_type=input_type)
             return [output], ineqs
         else:
-            raise Exception(f'ann type must be vle or hs not {ann_type}')
+            raise Exception(f'ann type cant be {ann_type}')

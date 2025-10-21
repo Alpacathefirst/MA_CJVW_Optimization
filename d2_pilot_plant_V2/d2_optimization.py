@@ -3,6 +3,8 @@ import time
 import os
 from pathlib import Path
 import pandas as pd
+import json
+import datetime as dt
 
 # TEMP_BOUNDS_C = {
 #     "T_C101": (20, 120),
@@ -148,8 +150,8 @@ class Model(maingopy.MAiNGOmodel):
                 )
         variables[10] = maingopy.OptimizationVariable(maingopy.Bounds(10, 100), maingopy.VT_CONTINUOUS, "H2O in C2")
         variables.append(maingopy.OptimizationVariable(maingopy.Bounds(0.8, 0.95), maingopy.VT_CONTINUOUS, "Liquid Split"))
-        variables.append(maingopy.OptimizationVariable(maingopy.Bounds(1, 25), maingopy.VT_CONTINUOUS, "P_V102"))
-        variables.append(maingopy.OptimizationVariable(maingopy.Bounds(1, 25), maingopy.VT_CONTINUOUS, "P_V103"))
+        variables.append(maingopy.OptimizationVariable(maingopy.Bounds(1, 10), maingopy.VT_CONTINUOUS, "RATIO_P_V102_V103"))
+        variables.append(maingopy.OptimizationVariable(maingopy.Bounds(1, 10), maingopy.VT_CONTINUOUS, "RATIO_P_V103_V104"))
 
         return variables
 
@@ -278,13 +280,14 @@ class ModelHandler:
         myMAiNGO.set_option("epsilonA", 1e-3)
         myMAiNGO.set_option('epsilonR', 1e-2)
         myMAiNGO.set_option('deltaEq', 1e-2)  # when equality constraint is met
-        myMAiNGO.set_option("maxTime", 200)
+        myMAiNGO.set_option("maxTime", 1000)
 
         # We can have MAiNGO read a settings file:
         BASE = Path(r'C:\Users\caspe\PycharmProjects\MA_CJVW_Optimization\outputs\optimization_outputs')
         # myMAiNGO.read_settings(fileName) # If fileName is empty, MAiNGO will attempt to open MAiNGOSettings.txt
         myMAiNGO.set_log_file_name(str(BASE / "run.log"))
         myMAiNGO.set_option("writeCsv", True)
+        myMAiNGO.set_option("writeJson", True)
         myMAiNGO.set_iterations_csv_file_name(str(BASE / "iterations.csv"))
         myMAiNGO.set_solution_and_statistics_csv_file_name(str(BASE / "solution_and_statistics.csv"))
 
@@ -297,8 +300,8 @@ class ModelHandler:
             1,  # p_filter
             60 + 273.15,  # t_co2_tank
             95,  # p_co2_tank
-            10,  # p V102
-            5,  # p V103
+            75,  # p V102
+            25,  # p V103
             1,  # p V104
             70 + 273.15  # T_HE1_hot_out
         ]
@@ -363,6 +366,8 @@ class ModelHandler:
         if os.path.exists(file_path):
             raise Exception('Choose different name for sensitivity analysis')
 
+        t0 = time.perf_counter()
+
         def function(p_v102, p_v103):
             self.initialise_model()
             parameters = [
@@ -399,8 +404,32 @@ class ModelHandler:
                         **c_data  # e.g. c_* [€], c_Total_scaled [€]
                     }
                     sensitivity_rows.append(row)
+
+        elapsed = time.perf_counter() - t0
         sensitivity_data = pd.DataFrame(sensitivity_rows)
-        sensitivity_data.to_csv(file_path, index=False)
+
+        # Safely fetch your “choices” from globals if available
+        NN_SIZE_val = globals().get('NN_SIZE', None)
+        VLE_WITH_val = globals().get('VLE_TYPE_WITH_NaOH', None)
+        VLE_NO_val = globals().get('VLE_TYPE_NO_NaOH', None)
+
+        meta_lines = [
+            "# Run metadata",
+            f"# Timestamp,{dt.datetime.now().isoformat()}",
+            f"# Elapsed_seconds,{elapsed:.3f}",
+            f"# VLE_TYPE_WITH_NaOH,{VLE_WITH_val}",
+            f"# VLE_TYPE_NO_NaOH,{VLE_NO_val}",
+            f"# NN_SIZE,{json.dumps(NN_SIZE_val) if NN_SIZE_val is not None else 'N/A'}",
+            ""  # blank line before the CSV header
+        ]
+
+        # Write metadata + CSV table
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(file_path, "w", newline="") as f:
+            f.write("\n".join(meta_lines) + "\n")
+            sensitivity_data.to_csv(f, index=False)
+
+        print(f"Sensitivity written to: {file_path} (elapsed {elapsed:.1f}s)")
 
     def run_optimization_of_cost_function(self):
         self.initialise_model()
@@ -419,7 +448,7 @@ if __name__ == '__main__':
     # model_handler.print_solution(stream_errors, equalities, stream_outputs)
 
     # run this for sensitivity analysis of cost function vs p_v102, p_v103
-    # model_handler.run_sensitivity_analysis(name='251016_sens_analysis_2')
+    # model_handler.run_sensitivity_analysis(name='251017_2')
 
     # run this for optimization of p_v102 and p_v103 to get minimal of cost function
     model_handler.run_optimization_of_cost_function()

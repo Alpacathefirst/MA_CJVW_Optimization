@@ -86,7 +86,7 @@ class BaseUnit(ABC):
 
 
 class MixerUnit(BaseUnit):
-    def ann_type(self): return 'hs'
+    def ann_type(self): return 'HS'
 
 
 class FlashUnit(BaseUnit):
@@ -141,7 +141,7 @@ class ReactorUnit(BaseUnit):
         return equalities
 
     def ann_type(self):
-        return 'hs'
+        return 'HS'
 
 
 class PumpUnit(BaseUnit):
@@ -171,7 +171,7 @@ class PumpUnit(BaseUnit):
         return h_out - self.h_in - self.power
 
     def ann_type(self):
-        return 'hs'
+        return 'HS'
 
 
 class FilterUnit(BaseUnit):
@@ -226,12 +226,12 @@ class FilterUnit(BaseUnit):
         return [vle_outputs, s_outputs]
 
     def ann_type(self):
-        return 'hs'
+        return 'HS'
 
 
 class ChangePTUnit(BaseUnit):
     def ann_type(self):
-        return 'hs'
+        return 'HS'
 
 
 class SplitterUnit(BaseUnit):
@@ -263,7 +263,7 @@ class SplitterUnit(BaseUnit):
         return [stream_1, stream_2]
 
     def ann_type(self):
-        return 'hs'
+        return 'HS'
 
 
 class CompressorUnit(BaseUnit):
@@ -346,4 +346,4 @@ class CompressorUnit(BaseUnit):
         return self.outputs[0]
 
     def ann_type(self):
-        return 'hs'
+        return 'HS'

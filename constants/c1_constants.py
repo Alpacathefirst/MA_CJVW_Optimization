@@ -1,25 +1,112 @@
 from constants.c3_imports import *
 from constants.c2_database_values import *
 
+# big = 60,60,60, small = 20,20,20
+NN_SIZE = {'XY': {'with naoh': 'small', 'no naoh': 'small'},  # 'small' not available
+           'AA': {'with naoh': 'small', 'no naoh': 'small'},
+           'AY': {'with naoh': 'small'},
+           'ALOAD': {'with naoh': 'small'},
+           'HS': {'with naoh': 'small', 'no naoh': 'small'}}
+
+VLE_TYPE_NO_NaOH = 'AA'
+VLE_TYPE_WITH_NaOH = 'ALOAD'
+
 NN_DIR = r'C:\Users\caspe\PycharmProjects\MA_CJVW_Optimization\inputs\d6_trained_nn'
 TRANSFORMERS_DIR = r'C:\Users\caspe\PycharmProjects\MA_CJVW_Optimization\inputs\d7_trained_nn_transformers'
-# VLE_FILES = {'with naoh': r'DATASET_LOW_P_250911_refined_3_1', 'no naoh': r'DATASET_VAPOR_250912_refined_3_2'}
 
-# VLE_FILES = {'with naoh': r'DATASET_250911_refined_1_1', 'no naoh': r'DATASET_VAPOR_250912_refined_3_2'}
-VLE_FILES = {'with naoh': r'251012_VLE_with_NaOH_refined_6_1', 'no naoh': r'251014_VLE_no_NaOH_refined_2_1'}
-VLE_A_BASED_FILES = {'with naoh': r'251012_VLE_with_NaOH_refined_6_2', 'no naoh': r'251014_VLE_no_NaOH_refined_2_2'}
-VLE_MIXED_FILES = {'with naoh': '251015_VLE_with_NaOH_refined_1_3', 'no naoh': r'251014_VLE_no_NaOH_refined_2_2'}  # TODO: FIle not correct here for no naoh
-# HS_FILES = {'with naoh': r'DATASET_S_H_250911_refined_1_1', 'no naoh': r'DATASET_VAPOR_250912_refined_3_1'}
-# HS_FILES = {'with naoh': r'251012_VLE_with_NaOH_refined_7_2', 'no naoh': r'251014_VLE_no_NaOH_higherT_3'}  # --> THIS WORKS
-HS_FILES = {'with naoh': r'251015_VLE_with_NaOH_refined_1_5', 'no naoh': r'251014_VLE_no_NaOH_higherT_3'}
+# Network: [T, P, CO2_frac, Molality] -> [Y_H2O, X_CO2, Vapor Fraction]
+VLE_XY_NaOH_BIG = r'251012_VLE_with_NaOH_refined_6_1'
+VLE_XY_NO_NaOH_BIG = r'251014_VLE_no_NaOH_refined_2_1'
+
+# Network: [T, P, CO2_frac, Molality] -> [A_CO2, A_H2O]  # not precise enough for big H2O inputs
+VLE_A_NaOH_BIG = r'251012_VLE_with_NaOH_refined_6_2'
+VLE_A_NO_NaOH_BIG = r'251014_VLE_no_NaOH_refined_2_2'
+VLE_A_NaOH_SMALL = r'251015_VLE_with_NaOH_refined_1_6'
+VLE_A_NO_NaOH_SMALL = r'251014_VLE_no_NaOH_refined_2_3'
+
+# Network [T, P, CO2_frac, Molality] -> [A_CO2, Y_H2O]
+VLE_AY_NaOH_BIG = r'251015_VLE_with_NaOH_refined_1_1'
+VLE_AY_NaOH_SMALL = r'251015_VLE_with_NaOH_refined_1_7'
+
+# Network: [T, P, CO2_frac, Molality] -> [A_CO2, H2O_LOAD]
+VLE_LOAD_NaOH_BIG = r'251015_VLE_with_NaOH_refined_1_1'
+VLE_LOAD_NaOH_SMALL = r'251015_VLE_with_NaOH_refined_1_3'
+
+# Network [T, P, CO2_frac, Molality] -> [entropy, dH]
+HS_NaOH_BIG = r'251012_VLE_with_NaOH_refined_7_2'
+HS_NO_NaOH_BIG = r'251014_VLE_no_NaOH_higherT_2'
+HS_NaOH_SMALL = r'251015_VLE_with_NaOH_refined_1_5'
+HS_NO_NaOH_SMALL = r'251014_VLE_no_NaOH_higherT_3'
 
 
-ANN_FILES = {'vle': VLE_FILES, 'vle_A_based': VLE_A_BASED_FILES, 'vle_mixed': VLE_MIXED_FILES, 'hs': HS_FILES}
+VLE_XY_NaOH = {
+    'big': VLE_XY_NaOH_BIG,
+    'small': None
+}
+
+VLE_XY_NO_NaOH = {
+    'big': VLE_XY_NO_NaOH_BIG,
+    'small': None
+}
+
+VLE_A_NaOH = {
+    'big': VLE_A_NaOH_BIG,
+    'small': VLE_A_NaOH_SMALL
+}
+
+VLE_A_NO_NaOH = {
+    'big': VLE_A_NO_NaOH_BIG,
+    'small': VLE_A_NO_NaOH_SMALL
+}
+
+VLE_AY_NaOH = {
+    'big': VLE_AY_NaOH_BIG,
+    'small': VLE_AY_NaOH_SMALL
+}
+
+VLE_LOAD_NaOH = {
+    'big': VLE_LOAD_NaOH_BIG,
+    'small': VLE_LOAD_NaOH_SMALL
+}
+
+HS_NaOH = {
+    'big': HS_NaOH_BIG,
+    'small': HS_NaOH_SMALL
+}
+
+HS_NO_NaOH = {
+    'big': HS_NO_NaOH_BIG,
+    'small': HS_NO_NaOH_SMALL
+}
+
+VLE_XY_FILES = {
+    'with naoh': VLE_XY_NaOH[NN_SIZE['XY']['with naoh']],
+    'no naoh':   VLE_XY_NO_NaOH[NN_SIZE['XY']['no naoh']],
+}
+
+VLE_A_BASED_FILES = {
+    'with naoh': VLE_A_NaOH[NN_SIZE['AA']['with naoh']],
+    'no naoh':   VLE_A_NO_NaOH[NN_SIZE['AA']['no naoh']],
+}
+
+VLE_AY_FILES = {
+    'with naoh': VLE_AY_NaOH[NN_SIZE['AY']['with naoh']],
+}
+
+VLE_LOAD_FILES = {
+    'with naoh': VLE_LOAD_NaOH[NN_SIZE['ALOAD']['with naoh']],
+}
+
+HS_FILES = {
+    'with naoh': HS_NaOH[NN_SIZE['HS']['with naoh']],
+    'no naoh':   HS_NO_NaOH[NN_SIZE['HS']['no naoh']],
+}
+
+
+ANN_FILES = {'XY': VLE_XY_FILES, 'AA': VLE_A_BASED_FILES, 'AY': VLE_AY_FILES, 'ALOAD': VLE_LOAD_FILES, 'HS': HS_FILES}
 
 gas_species = ['CO2(g)', 'H2O(g)']
 
-ACTIVATE_A_BASED_VLE = False
-ACTIVATE_VLE_MIXED = True
 
 g_hf, g_a, g_b, g_c, g_d, g_sr, g_vr = [], [], [], [], [], [], []
 

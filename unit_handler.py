@@ -7,7 +7,7 @@ class UnitHandler:
         self.ann = AnnHandler(self.model)
 
     def stream(self, inputs, input_type):
-        output, ineq = self.ann.evaluate(ann_type='hs', inputs=inputs, input_type=input_type)
+        output, ineq = self.ann.evaluate(ann_type='HS', inputs=inputs, input_type=input_type)
         self.model.inequalities += ineq
         return output[0]
 
